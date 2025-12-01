@@ -2222,14 +2222,27 @@ async function loadWorkspace(data) {
             }
         }
 
-        // Setup real-time listeners for automatic sync
+        // Setup real-time listeners for automatic sync (immediately)
         if (window.setupAllRealtimeListeners && !window.realtimeListenersInitialized) {
-            setTimeout(() => {
-                if (window.db && window.userEmail) {
+            // Try immediately, then retry if needed
+            const setupListeners = () => {
+                if (window.db && window.userEmail && window.auth && window.auth.currentUser) {
+                    console.log('[Real-time Sync] Initializing listeners...');
                     window.setupAllRealtimeListeners();
                     window.realtimeListenersInitialized = true;
+                    return true;
                 }
-            }, 2000); // Wait 2 seconds for everything to initialize
+                return false;
+            };
+
+            if (!setupListeners()) {
+                // Retry after short delay if not ready
+                setTimeout(() => {
+                    if (!window.realtimeListenersInitialized) {
+                        setupListeners();
+                    }
+                }, 500);
+            }
         }
 
         // Start page loading tracking for critical pages that load data on initialization

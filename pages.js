@@ -2255,15 +2255,24 @@ async function setupRealtimeListener(collectionName, tableType) {
                 console.log(`[Real-time Sync] ${tableType} collection changed. Processing changes...`);
 
                 let hasChanges = false;
+                let changeCount = {
+                    added: 0,
+                    modified: 0,
+                    removed: 0
+                };
+
                 // Check for actual changes (not just initial load)
                 snapshot.docChanges().forEach((change) => {
                     hasChanges = true;
                     if (change.type === 'added') {
-                        console.log(`[Real-time Sync] New ${tableType} added:`, change.doc.id);
+                        changeCount.added++;
+                        console.log(`[Real-time Sync] ✨ New ${tableType} added:`, change.doc.id);
                     } else if (change.type === 'modified') {
-                        console.log(`[Real-time Sync] ${tableType} modified:`, change.doc.id);
+                        changeCount.modified++;
+                        console.log(`[Real-time Sync] 🔄 ${tableType} modified:`, change.doc.id);
                     } else if (change.type === 'removed') {
-                        console.log(`[Real-time Sync] ${tableType} removed:`, change.doc.id);
+                        changeCount.removed++;
+                        console.log(`[Real-time Sync] 🗑️ ${tableType} removed:`, change.doc.id);
                     }
                 });
 
@@ -2271,6 +2280,9 @@ async function setupRealtimeListener(collectionName, tableType) {
                     console.log(`[Real-time Sync] ${tableType} snapshot received but no changes detected`);
                     return;
                 }
+
+                // Show sync notification
+                showSyncNotification(tableType, changeCount);
 
                 // Update cache with new data
                 const dataArray = [];
@@ -2441,9 +2453,122 @@ window.startPollingFallback = startPollingFallback;
 window.stopPollingFallback = stopPollingFallback;
 
 // Make functions globally available
+// Show sync notification when data changes
+function showSyncNotification(tableType, changeCount) {
+    // Create or get notification container
+    let notificationContainer = document.getElementById('sync-notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'sync-notification-container';
+        notificationContainer.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+
+    // Create notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        background: var(--white);
+        border: 2px solid var(--primary-color);
+        border-radius: 12px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 250px;
+        animation: slideInRight 0.3s ease-out;
+        pointer-events: auto;
+    `;
+
+    const tableNames = {
+        voters: 'Voters',
+        calls: 'Calls',
+        pledges: 'Pledges',
+        events: 'Events',
+        agents: 'Agents',
+        candidates: 'Candidates'
+    };
+
+    let message = '';
+    if (changeCount.added > 0) {
+        message = `${changeCount.added} new ${tableNames[tableType] || tableType} added`;
+    } else if (changeCount.modified > 0) {
+        message = `${changeCount.modified} ${tableNames[tableType] || tableType} updated`;
+    } else if (changeCount.removed > 0) {
+        message = `${changeCount.removed} ${tableNames[tableType] || tableType} removed`;
+    }
+
+    notification.innerHTML = `
+        <div style="width: 8px; height: 8px; background: var(--primary-color); border-radius: 50%; animation: pulse 2s infinite;"></div>
+        <div style="flex: 1;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-color);">Data Synced</div>
+            <div style="font-size: 12px; color: var(--text-light); margin-top: 2px;">${message}</div>
+        </div>
+    `;
+
+    notificationContainer.appendChild(notification);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add CSS animations for sync notifications
+if (!document.getElementById('sync-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'sync-notification-styles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 window.setupAllRealtimeListeners = setupAllRealtimeListeners;
 window.cleanupAllRealtimeListeners = cleanupAllRealtimeListeners;
 window.setupRealtimeListener = setupRealtimeListener;
+window.showSyncNotification = showSyncNotification;
 
 // Universal cache validation function
 function isCacheValid(cacheType, forceRefresh = false) {
