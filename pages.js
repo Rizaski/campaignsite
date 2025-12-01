@@ -225,15 +225,15 @@ const pageTemplates = {
                 <h1>Call Management</h1>
                 <p class="page-subtitle">Track and manage campaign calls</p>
             </div>
-            <div style="display: flex; gap: 12px;">
-                <button class="btn-secondary btn-compact" onclick="openCallLinkModal()">
+            <div class="action-buttons-row" style="display: flex; gap: 12px; flex-wrap: nowrap; align-items: center;">
+                <button class="btn-secondary btn-compact" onclick="openCallLinkModal()" style="white-space: nowrap; flex: 0 0 auto;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                     Generate Link
                 </button>
-                <button class="btn-primary btn-compact" onclick="window.openModal('call')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Make Call
-            </button>
+                <button class="btn-primary btn-compact" onclick="window.openModal('call')" style="white-space: nowrap; flex: 0 0 auto;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Make Call
+                </button>
             </div>
         </div>
         
@@ -397,8 +397,8 @@ const pageTemplates = {
                 <h1>Agent Assignment</h1>
                 <p class="page-subtitle">Assign and manage campaign agents</p>
             </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button class="btn-secondary btn-compact" onclick="showAgentSelectionForVoterAssignment()">
+            <div class="action-buttons-row" style="display: flex; gap: 12px; align-items: center; flex-wrap: nowrap;">
+                <button class="btn-secondary btn-compact" onclick="showAgentSelectionForVoterAssignment()" style="white-space: nowrap; flex: 0 0 auto;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="8.5" cy="7" r="4"></circle>
@@ -407,10 +407,10 @@ const pageTemplates = {
                     </svg>
                     Assign Voters
                 </button>
-            <button class="btn-primary btn-compact">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Add Agent
-            </button>
+                <button class="btn-primary btn-compact" onclick="window.openModal('agent')" style="white-space: nowrap; flex: 0 0 auto;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Add Agent
+                </button>
             </div>
         </div>
         

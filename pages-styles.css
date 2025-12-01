@@ -53,6 +53,20 @@
     flex-shrink: 1;
 }
 
+/* Action buttons row - keeps buttons side by side */
+.page-header .action-buttons-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+}
+
+.page-header .action-buttons-row button {
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
 .page-header h1 {
     font-size: 32px;
     font-weight: 700;
@@ -1603,6 +1617,21 @@ select.search-input:focus {
         align-items: flex-start;
     }
 
+    /* Keep action buttons side by side on mobile */
+    .page-header .action-buttons-row {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .page-header .action-buttons-row button {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
     .page-header>div:last-child .search-input,
     .page-header>div:last-child select {
         width: 100% !important;
@@ -1657,6 +1686,18 @@ select.search-input:focus {
     .page-header>div:last-child {
         gap: 8px;
         align-items: flex-start;
+    }
+
+    /* Keep action buttons side by side on small mobile */
+    .page-header .action-buttons-row {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 8px;
+    }
+
+    .page-header .action-buttons-row button {
+        font-size: 13px;
+        padding: 8px 12px;
     }
 
     .page-header>div:last-child .search-input,
@@ -1918,5 +1959,19 @@ select.search-input:focus {
 
     .modal-container[style*="max-width: 1200px"]>.modal-body>div[style*="grid-template-columns: 1fr 1fr"]>div {
         max-height: 300px !important;
+    }
+}
+
+/* Extremely narrow screens - allow buttons to stack if needed */
+@media (max-width: 320px) {
+    .page-header .action-buttons-row {
+        flex-direction: column !important;
+        flex-wrap: wrap !important;
+        align-items: stretch !important;
+    }
+
+    .page-header .action-buttons-row button {
+        width: 100%;
+        flex: 1 1 auto;
     }
 }
