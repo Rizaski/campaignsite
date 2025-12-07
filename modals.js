@@ -10,15 +10,22 @@ function ensureModalExists() {
         modalOverlay.className = 'modal-overlay';
         modalOverlay.style.display = 'none';
         modalOverlay.innerHTML = `
-            <div class="modal-container">
+            <div class="modal-container" id="modal-container">
                 <div class="modal-header">
                     <h2 id="modal-title">Modal Title</h2>
-                    <button class="modal-close" id="modal-close-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="modal-maximize" id="modal-maximize-btn" title="Maximize">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                            </svg>
+                        </button>
+                        <button class="modal-close" id="modal-close-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-body" id="modal-body">
                     <!-- Modal content will be inserted here -->
@@ -31,6 +38,16 @@ function ensureModalExists() {
         const closeBtn = modalOverlay.querySelector('#modal-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', closeModal);
+        }
+
+        // Add maximize button handler
+        const maximizeBtn = modalOverlay.querySelector('#modal-maximize-btn');
+        const modalContainer = modalOverlay.querySelector('#modal-container');
+        if (maximizeBtn && modalContainer) {
+            maximizeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleModalMaximize(modalContainer, maximizeBtn);
+            });
         }
 
         // Close on overlay click
@@ -1691,8 +1708,9 @@ async function handleFormSubmit(type, formData) {
 
                 // If call was made via link, increment call count
                 if (type === 'call') {
-                    const callLinkId = window.callLinkData.linkId;
-                    if (callLinkId) {
+                    // Check if callLinkData exists and has linkId
+                    if (window.callLinkData && window.callLinkData.linkId) {
+                        const callLinkId = window.callLinkData.linkId;
                         try {
                             const {
                                 doc,
@@ -1706,10 +1724,14 @@ async function handleFormSubmit(type, formData) {
                                 await updateDoc(linkRef, {
                                     callCount: currentCount + 1
                                 });
+                                console.log(`[handleFormSubmit] Incremented call count for link ${callLinkId}`);
                             }
                         } catch (error) {
                             console.error('Error incrementing call count:', error);
                         }
+                    } else {
+                        // Call was made from regular call management, not from link
+                        console.log('[handleFormSubmit] Call made from regular interface (not from link)');
                     }
                 }
                 console.log(`[handleFormSubmit] Verifying saved data...`);
@@ -2071,11 +2093,53 @@ function closeModal() {
         if (modalOverlay) {
             modalOverlay.style.display = 'none';
             document.body.style.overflow = '';
+            // Reset maximize state when closing
+            const modalContainer = modalOverlay.querySelector('#modal-container');
+            const maximizeBtn = modalOverlay.querySelector('#modal-maximize-btn');
+            if (modalContainer && maximizeBtn) {
+                modalContainer.classList.remove('modal-maximized');
+                maximizeBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                `;
+                maximizeBtn.title = 'Maximize';
+            }
         }
     } catch (error) {
         console.error('Error closing modal:', error);
     }
 }
+
+// Toggle modal maximize/minimize
+function toggleModalMaximize(modalContainer, maximizeBtn) {
+    if (!modalContainer || !maximizeBtn) return;
+
+    const isMaximized = modalContainer.classList.contains('modal-maximized');
+
+    if (isMaximized) {
+        // Minimize
+        modalContainer.classList.remove('modal-maximized');
+        maximizeBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+        `;
+        maximizeBtn.title = 'Maximize';
+    } else {
+        // Maximize
+        modalContainer.classList.add('modal-maximized');
+        maximizeBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+            </svg>
+        `;
+        maximizeBtn.title = 'Restore';
+    }
+}
+
+// Make function globally available
+window.toggleModalMaximize = toggleModalMaximize;
 
 // Setup ballot dropdown for voter form and other forms
 async function setupBallotDropdown() {

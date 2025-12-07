@@ -2300,6 +2300,31 @@ input[type="file"] {
     background: var(--light-color);
 }
 
+.messenger-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.messenger-btn .messenger-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 12px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 4px;
+    border: 2px solid white;
+}
+
 .notification-btn {
     position: relative;
 }
@@ -3515,7 +3540,8 @@ input[type="file"] {
     color: var(--text-color);
 }
 
-.modal-close {
+.modal-close,
+.modal-maximize {
     background: none;
     border: none;
     cursor: pointer;
@@ -3528,14 +3554,31 @@ input[type="file"] {
     justify-content: center;
 }
 
-.modal-close:hover {
+.modal-close:hover,
+.modal-maximize:hover {
     background: var(--border-light);
     color: var(--text-color);
 }
 
-.modal-close svg {
+.modal-close svg,
+.modal-maximize svg {
     width: 20px;
     height: 20px;
+}
+
+/* Modal Maximized State */
+.modal-container.modal-maximized {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    width: 100% !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+}
+
+.modal-container.modal-maximized .modal-body {
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
 }
 
 .modal-body {

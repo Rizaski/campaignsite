@@ -541,6 +541,143 @@
             background: rgba(0, 0, 0, 0.08);
             margin: 6px 0;
         }
+
+        /* New Inline Pledge Actions Style */
+        .agent-voter-actions-inline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+
+        .agent-pledge-actions-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--light-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+
+        .agent-pledge-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-light);
+            position: relative;
+        }
+
+        .agent-pledge-btn:hover {
+            background: rgba(111, 193, 218, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .agent-pledge-btn:active {
+            transform: translateY(0) scale(0.95);
+        }
+
+        .agent-pledge-btn-positive {
+            color: var(--success-color, #10b981);
+        }
+
+        .agent-pledge-btn-positive:hover {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color, #10b981);
+        }
+
+        .agent-pledge-btn-positive.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-color, #10b981);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .agent-pledge-btn-negative {
+            color: var(--danger-color, #dc2626);
+        }
+
+        .agent-pledge-btn-negative:hover {
+            background: rgba(220, 38, 38, 0.15);
+            color: var(--danger-color, #dc2626);
+        }
+
+        .agent-pledge-btn-negative.active {
+            background: rgba(220, 38, 38, 0.2);
+            color: var(--danger-color, #dc2626);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+
+        .agent-pledge-btn-undecided {
+            color: var(--warning-color, #f59e0b);
+        }
+
+        .agent-pledge-btn-undecided:hover {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color, #f59e0b);
+        }
+
+        .agent-pledge-btn-undecided.active {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning-color, #f59e0b);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .agent-remark-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-color);
+            flex-shrink: 0;
+        }
+
+        .agent-remark-btn:hover {
+            background: rgba(111, 193, 218, 0.08);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .agent-remark-btn:active {
+            transform: translateY(0) scale(0.95);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .agent-voter-actions-inline {
+                gap: 4px;
+            }
+
+            .agent-pledge-btn,
+            .agent-remark-btn {
+                width: 28px;
+                height: 28px;
+            }
+
+            .agent-pledge-btn svg,
+            .agent-remark-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+        }
     </style>
 
     <!-- Access Code Verification Modal -->

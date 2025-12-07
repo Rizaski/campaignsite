@@ -121,6 +121,7 @@ if (!window.cancelIdleCallback) {
 }
 
 const storage = getStorage(app);
+window.storage = storage; // Make storage globally available
 
 // Ensure Firestore Database is Initialized
 // Firestore initialization is synchronous - this function just ensures db exists
@@ -2159,6 +2160,13 @@ async function loadWorkspace(data) {
         }, 100);
 
         // Setup notification handlers when workspace is shown (elements should exist now)
+        // Load notifications when workspace screen is shown
+        if (typeof window.loadNotifications === 'function') {
+            console.log('[App] Loading notifications after workspace screen shown...');
+            setTimeout(() => {
+                window.loadNotifications();
+            }, 500); // Small delay to ensure DOM is ready
+        }
         setTimeout(() => {
             if (typeof window.setupNotificationHandlers === 'function') {
                 window.setupNotificationHandlers();

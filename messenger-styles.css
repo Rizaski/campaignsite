@@ -64,6 +64,30 @@
     display: none;
 }
 
+/* Messenger Header Button Styles */
+.messenger-btn {
+    position: relative;
+}
+
+.messenger-btn .messenger-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 12px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 4px;
+    border: 2px solid white;
+    z-index: 1;
+}
+
 /* Messenger Header */
 .messenger-header {
     padding: 16px 20px;
@@ -233,7 +257,7 @@
 }
 
 .messenger-user-name {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     font-family: 'Poppins', sans-serif;
     color: var(--text-color);
@@ -257,30 +281,30 @@
     text-overflow: ellipsis;
 }
 
-/* Chat Window */
+/* Chat Window - Facebook Messenger Style */
 .messenger-chat-window {
     position: fixed;
-    bottom: 76px;
-    right: 76px;
-    width: 300px;
-    height: 400px;
+    top: 70px;
+    right: 25px;
+    width: 360px;
+    height: 500px;
     max-height: calc(100vh - 100px);
     background: var(--white);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     z-index: 10000;
-    transform: translateX(400px);
+    transform: translateY(-20px) scale(0.95);
     opacity: 0;
     pointer-events: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     border: 1px solid var(--border-color);
 }
 
 .messenger-chat-window.open {
-    transform: translateX(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
     pointer-events: all;
 }
@@ -343,7 +367,7 @@
 }
 
 .chat-user-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     font-family: 'Poppins', sans-serif;
     white-space: nowrap;

@@ -8,6 +8,7 @@ import {
     onSnapshot,
     addDoc,
     orderBy,
+    limit,
     serverTimestamp,
     doc,
     getDoc,
@@ -67,6 +68,7 @@ let messengerEnabled = false;
 let selectedUserId = null;
 let onlineUsers = [];
 let unreadCount = 0;
+let seenMessageIds = new Set(); // Track messages that have been seen to avoid duplicate notifications
 
 // Initialize Messenger
 function initMessenger() {
@@ -88,6 +90,9 @@ function initMessenger() {
 
     // Setup event listeners
     setupMessengerListeners();
+
+    // Setup header button click handler
+    setupMessengerHeaderButton();
 
     // Check if we're in agent portal mode
     const isAgentPortal = window.agentData && window.campaignEmail;
@@ -130,6 +135,9 @@ function initMessenger() {
             campaignEmail: window.campaignEmail,
             agentData: window.agentData
         });
+
+        // Set up presence tracking for agent
+        setupPresenceTrackingForAgent();
 
         // Load online users (Campaign Manager + other agents)
         loadOnlineUsers().catch(error => {
@@ -185,9 +193,58 @@ function initMessenger() {
     }
 }
 
+// Setup header button click handler (Facebook Messenger style)
+function setupMessengerHeaderButton() {
+    const headerBtn = document.getElementById('messenger-header-btn');
+    if (headerBtn) {
+        // Remove any existing listeners by cloning
+        const newBtn = headerBtn.cloneNode(true);
+        headerBtn.parentNode.replaceChild(newBtn, headerBtn);
+
+        newBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const chatWindow = document.getElementById('messenger-chat-window');
+            if (chatWindow) {
+                const isOpen = chatWindow.classList.contains('open');
+                if (isOpen) {
+                    chatWindow.classList.remove('open');
+                    selectedUserId = null;
+                    // Clear messages when closing
+                    const messagesContainer = document.getElementById('chat-messages');
+                    if (messagesContainer) {
+                        messagesContainer.innerHTML = '';
+                    }
+                } else {
+                    chatWindow.classList.add('open');
+                    // Always show user list when opening (if no user selected)
+                    if (!selectedUserId) {
+                        showUsersInChatWindow();
+                    }
+                }
+            }
+        });
+
+        // Close messenger when clicking outside (Facebook Messenger style)
+        document.addEventListener('click', (e) => {
+            const chatWindow = document.getElementById('messenger-chat-window');
+            if (chatWindow && chatWindow.classList.contains('open')) {
+                if (!chatWindow.contains(e.target) && !newBtn.contains(e.target)) {
+                    chatWindow.classList.remove('open');
+                    selectedUserId = null;
+                    const messagesContainer = document.getElementById('chat-messages');
+                    if (messagesContainer) {
+                        messagesContainer.innerHTML = '';
+                    }
+                }
+            }
+        });
+        console.log('[Messenger] Header button handler attached');
+    }
+}
+
 // Setup event listeners
 function setupMessengerListeners() {
-    // Toggle button - opens chat window with user list
+    // Old toggle button (if exists) - for backward compatibility
     const toggleBtn = document.getElementById('messenger-toggle-btn');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
@@ -294,22 +351,20 @@ function setupMessengerListeners() {
 
 // Update messenger visibility based on settings
 function updateMessengerVisibility() {
-    const toggleBtn = document.getElementById('messenger-toggle-btn');
+    const headerBtn = document.getElementById('messenger-header-btn');
     const chatWindow = document.getElementById('messenger-chat-window');
     const settingsToggle = document.getElementById('messenger-enabled-toggle');
 
     if (messengerEnabled) {
-        // Show toggle button only when messenger is enabled
-        if (toggleBtn) {
-            toggleBtn.classList.remove('hidden');
-            toggleBtn.style.display = 'flex'; // Ensure it's visible
+        // Show header button only when messenger is enabled
+        if (headerBtn) {
+            headerBtn.style.display = 'flex';
         }
         if (chatWindow) chatWindow.style.display = 'flex';
     } else {
-        // Hide toggle button when messenger is disabled
-        if (toggleBtn) {
-            toggleBtn.classList.add('hidden');
-            toggleBtn.style.display = 'none'; // Force hide
+        // Hide header button when messenger is disabled
+        if (headerBtn) {
+            headerBtn.style.display = 'none';
         }
         if (chatWindow) {
             chatWindow.classList.remove('open');
@@ -323,8 +378,7 @@ function updateMessengerVisibility() {
 
     console.log('[Messenger] Visibility updated:', {
         messengerEnabled,
-        toggleBtnVisible: toggleBtn && !toggleBtn.classList.contains('hidden'),
-        toggleBtnDisplay: toggleBtn ? toggleBtn.style.display : 'N/A'
+        headerBtnVisible: headerBtn && headerBtn.style.display !== 'none'
     });
 }
 
@@ -379,6 +433,66 @@ async function setupPresenceTracking() {
             console.error('Error updating offline status:', error);
         }
     });
+}
+
+// Setup presence tracking for agents (uses agent_${id} format)
+async function setupPresenceTrackingForAgent() {
+    if (!userEmail || !userEmail.startsWith('agent_')) return;
+
+    try {
+        const userRef = doc(db, 'users', userEmail);
+
+        // Check if document exists, create if not
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) {
+            // Create agent user document
+            await setDoc(userRef, {
+                email: window.agentData.email || window.campaignEmail,
+                name: window.agentData.name || 'Agent',
+                isOnline: true,
+                lastSeen: serverTimestamp(),
+                agentId: window.agentData.id || null,
+                agentAccessCode: window.agentData.agentAccessCode || null
+            });
+            console.log('[Messenger] Created agent user document:', userEmail);
+        } else {
+            // Update existing document
+            await updateDoc(userRef, {
+                isOnline: true,
+                lastSeen: serverTimestamp()
+            });
+        }
+
+        // Update periodically to keep agent online
+        const presenceInterval = setInterval(async () => {
+            try {
+                await updateDoc(userRef, {
+                    isOnline: true,
+                    lastSeen: serverTimestamp()
+                });
+            } catch (error) {
+                console.error('[Messenger] Error updating agent presence:', error);
+            }
+        }, 30000); // Update every 30 seconds
+
+        // Update when user goes offline
+        window.addEventListener('beforeunload', async () => {
+            clearInterval(presenceInterval);
+            try {
+                await updateDoc(userRef, {
+                    isOnline: false,
+                    lastSeen: serverTimestamp()
+                });
+            } catch (error) {
+                console.error('[Messenger] Error updating agent offline status:', error);
+            }
+        });
+
+        // Store interval for cleanup
+        window.agentPresenceInterval = presenceInterval;
+    } catch (error) {
+        console.error('[Messenger] Error setting up agent presence:', error);
+    }
 }
 
 // Update user presence
@@ -543,20 +657,94 @@ async function loadOnlineUsersBySerialNumber() {
                 }
             });
 
+            // Load agents for this campaign and add them to online users
+            loadAgentsForCampaignManager();
+
             // Add admin to online users if admin is online
             addAdminToOnlineUsers();
 
-            // Update online count in header
+            // Update online count and UI
             updateOnlineCount();
-
-            // Show users in chat window if it's open
             const chatWindow = document.getElementById('messenger-chat-window');
             if (chatWindow && chatWindow.classList.contains('open') && !selectedUserId) {
                 showUsersInChatWindow();
             }
+        }, (error) => {
+            console.error('[Messenger] Error loading online users:', error);
         });
     } catch (error) {
-        console.error('Error loading online users:', error);
+        console.error('[Messenger] Error setting up online users listener:', error);
+    }
+}
+
+// Load agents for campaign manager
+async function loadAgentsForCampaignManager() {
+    if (!userEmail) return; // Campaign manager's email
+
+    try {
+        // Get agents for this campaign
+        const agentsQuery = query(
+            collection(db, 'agents'),
+            where('email', '==', userEmail)
+        );
+
+        const agentsSnapshot = await getDocs(agentsQuery);
+
+        agentsSnapshot.forEach((agentDoc) => {
+            const agentData = agentDoc.data();
+            const agentUserId = `agent_${agentDoc.id}`;
+
+            // Check if agent already in onlineUsers
+            const existingIndex = onlineUsers.findIndex(u => u.id === agentUserId);
+
+            // Get agent's online status from users collection
+            const agentUserRef = doc(db, 'users', agentUserId);
+            getDoc(agentUserRef).then((agentUserDoc) => {
+                const isOnline = agentUserDoc.exists() ? (agentUserDoc.data().isOnline || false) : false;
+
+                const agentUser = {
+                    id: agentUserId,
+                    email: agentData.email || userEmail,
+                    name: agentData.name || 'Agent',
+                    isOnline: isOnline,
+                    agentCode: agentData.agentId || agentData.agentAccessCode || null,
+                    isCampaignManager: false,
+                    isAgent: true,
+                    lastSeen: agentUserDoc.exists() ? agentUserDoc.data().lastSeen : null
+                };
+
+                if (existingIndex >= 0) {
+                    // Update existing agent
+                    onlineUsers[existingIndex] = agentUser;
+                } else {
+                    // Add new agent
+                    onlineUsers.push(agentUser);
+                }
+
+                // Set up real-time listener for this agent's presence
+                onSnapshot(agentUserRef, (agentUserDoc) => {
+                    const agentIndex = onlineUsers.findIndex(u => u.id === agentUserId);
+                    if (agentIndex >= 0) {
+                        if (agentUserDoc.exists()) {
+                            const agentUserData = agentUserDoc.data();
+                            onlineUsers[agentIndex].isOnline = agentUserData.isOnline || false;
+                            onlineUsers[agentIndex].lastSeen = agentUserData.lastSeen || null;
+                        } else {
+                            onlineUsers[agentIndex].isOnline = false;
+                        }
+                        updateOnlineCount();
+                        const chatWindow = document.getElementById('messenger-chat-window');
+                        if (chatWindow && chatWindow.classList.contains('open') && !selectedUserId) {
+                            showUsersInChatWindow();
+                        }
+                    }
+                });
+            }).catch((error) => {
+                console.error('[Messenger] Error getting agent user doc:', error);
+            });
+        });
+    } catch (error) {
+        console.error('[Messenger] Error loading agents for campaign manager:', error);
     }
 }
 
@@ -641,9 +829,16 @@ async function addAdminToOnlineUsers() {
 }
 
 // Update online count in header
+// Clean up old listeners and set up new ones when online users change
+function updateMessageListeners() {
+    cleanupMessageListeners();
+    listenForMessages();
+}
+
 function updateOnlineCount() {
     const chatUserStatus = document.getElementById('chat-user-status');
     const onlineCountEl = document.getElementById('messenger-online-count');
+    const headerBadge = document.getElementById('messenger-header-badge');
     const onlineCount = onlineUsers.filter(u => u.isOnline).length;
 
     if (chatUserStatus) {
@@ -652,6 +847,19 @@ function updateOnlineCount() {
     if (onlineCountEl) {
         onlineCountEl.textContent = `${onlineCount} online`;
     }
+
+    // Update header badge (show unread count if any)
+    if (headerBadge) {
+        if (unreadCount > 0) {
+            headerBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            headerBadge.style.display = 'flex';
+        } else {
+            headerBadge.style.display = 'none';
+        }
+    }
+
+    // Update message listeners when online users change
+    updateMessageListeners();
 }
 
 // Show users in chat window
@@ -709,7 +917,7 @@ function showUsersInChatWindow() {
                 <div class="messenger-user-avatar ${user.isOnline ? 'online' : ''}">${initials}</div>
                 <div class="messenger-user-info" style="flex: 1;">
                     <div class="messenger-user-name" style="display: flex; align-items: center; gap: 6px;">
-                        <span>${displayName}</span>
+                        <span style="font-size: 13px;">${displayName}</span>
                         ${isAdmin ? `
                             <span class="support-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                                 Support
@@ -752,6 +960,10 @@ async function openChat(userId) {
     const user = onlineUsers.find(u => u.id === userId);
     if (!user) return;
 
+    // Reset unread count when opening a chat (messages will be marked as read when viewed)
+    unreadCount = Math.max(0, unreadCount - 1); // Decrement, but don't go below 0
+    updateOnlineCount();
+
     // Ensure chat window is open
     const chatWindow = document.getElementById('messenger-chat-window');
     if (chatWindow) {
@@ -777,27 +989,27 @@ async function openChat(userId) {
         // Show Campaign Manager badge in chat header
         if (user.isAdmin) {
             chatUserName.innerHTML = `
-                <span>${displayName}</span>
-                <span class="support-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
-                    Support
-                </span>
-            `;
+                    <span style="font-size: 13px;">${displayName}</span>
+                    <span class="support-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
+                        Support
+                    </span>
+                `;
         } else if (user.isAdmin) {
             chatUserName.innerHTML = `
-                <span>${displayName}</span>
-                <span class="support-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
-                    Support
-                </span>
-            `;
+                    <span style="font-size: 13px;">${displayName}</span>
+                    <span class="support-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
+                        Support
+                    </span>
+                `;
         } else if (user.isCampaignManager) {
             chatUserName.innerHTML = `
-                <span>${displayName}</span>
-                <span class="campaign-manager-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
-                    Campaign Manager
-                </span>
-            `;
+                    <span style="font-size: 13px;">${displayName}</span>
+                    <span class="campaign-manager-badge" style="display: inline-flex; align-items: center; padding: 2px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
+                        Campaign Manager
+                    </span>
+                `;
         } else {
-            chatUserName.textContent = displayName;
+            chatUserName.innerHTML = `<span style="font-size: 13px;">${displayName}</span>`;
         }
     }
     if (chatUserStatus) {
@@ -829,14 +1041,69 @@ async function loadMessages(otherUserId) {
         const messagesRef = collection(db, 'conversations', conversationId, 'messages');
         const messagesQuery = query(messagesRef, orderBy('timestamp', 'asc'));
 
+        // Track if this is the first load (to avoid playing notification for existing messages)
+        let isFirstLoad = true;
+        const conversationKey = `seenMessages_${conversationId}`;
+
+        // Load previously seen message IDs from sessionStorage
+        const storedSeenIds = sessionStorage.getItem(conversationKey);
+        if (storedSeenIds) {
+            try {
+                seenMessageIds = new Set(JSON.parse(storedSeenIds));
+            } catch (e) {
+                seenMessageIds = new Set();
+            }
+        }
+
         onSnapshot(
             messagesQuery,
             (snapshot) => {
+                // Check for new messages using docChanges
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        const message = change.doc.data();
+                        const messageId = change.doc.id;
+
+                        // Only play notification if:
+                        // 1. Message is from other user
+                        // 2. Message hasn't been seen before
+                        // 3. Not the first load (to avoid playing for existing messages on chat open)
+                        if (message.senderId !== userEmail &&
+                            !seenMessageIds.has(messageId) &&
+                            !isFirstLoad) {
+                            playNotificationSound();
+                            // Increment unread count if chat window is not open or different conversation
+                            const chatWindow = document.getElementById('messenger-chat-window');
+                            const isChatOpen = chatWindow && chatWindow.classList.contains('open');
+                            const isCurrentConversation = selectedUserId === otherUserId;
+                            if (!isChatOpen || !isCurrentConversation) {
+                                unreadCount++;
+                                updateOnlineCount(); // This will update the badge
+                            }
+                        }
+
+                        // Mark message as seen
+                        seenMessageIds.add(messageId);
+                    }
+                });
+
+                // Save seen message IDs to sessionStorage
+                try {
+                    sessionStorage.setItem(conversationKey, JSON.stringify(Array.from(seenMessageIds)));
+                } catch (e) {
+                    console.warn('[Messenger] Could not save seen message IDs:', e);
+                }
+
                 messagesContainer.innerHTML = '';
                 snapshot.forEach((doc) => {
                     const message = doc.data();
                     renderMessage(message, message.senderId === userEmail);
+                    // Mark all existing messages as seen
+                    seenMessageIds.add(doc.id);
                 });
+
+                // Mark first load as complete
+                isFirstLoad = false;
 
                 // Scroll to bottom
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1204,7 +1471,9 @@ async function sendMessage() {
     }
 }
 
-// Listen for new messages
+// Listen for new messages (global listener for notifications)
+let globalMessageListeners = new Map(); // Track active listeners to avoid duplicates
+
 function listenForMessages() {
     if (!userEmail) return;
 
@@ -1213,9 +1482,89 @@ function listenForMessages() {
     const isAgentPortal = window.agentData && window.campaignEmail;
     if (!isAgentPortal && !userSerialNumber) return;
 
-    // This will be handled per conversation when opened
-    // We can also set up a global listener for unread counts
     console.log('[Messenger] Listening for messages for:', userEmail);
+
+    // Set up listeners for each online user to detect new messages
+    // This allows notifications even when chat window is not open
+    onlineUsers.forEach(user => {
+        if (user.id === userEmail) return; // Skip self
+
+        const conversationId = [userEmail, user.id].sort().join('_');
+
+        // Skip if listener already exists
+        if (globalMessageListeners.has(conversationId)) return;
+
+        try {
+            const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+            const messagesQuery = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
+
+            // Listen for the latest message in this conversation
+            const unsubscribe = onSnapshot(messagesQuery, (messagesSnapshot) => {
+                messagesSnapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        const message = change.doc.data();
+                        const messageId = change.doc.id;
+                        const conversationKey = `seenMessages_${conversationId}`;
+
+                        // Load seen message IDs for this conversation
+                        let seenIds = new Set();
+                        const storedSeenIds = sessionStorage.getItem(conversationKey);
+                        if (storedSeenIds) {
+                            try {
+                                seenIds = new Set(JSON.parse(storedSeenIds));
+                            } catch (e) {
+                                seenIds = new Set();
+                            }
+                        }
+
+                        // Only play notification if:
+                        // 1. Message is from other user
+                        // 2. Message hasn't been seen before
+                        // 3. Chat window is not open or different conversation is selected
+                        if (message.senderId !== userEmail && !seenIds.has(messageId)) {
+                            const chatWindow = document.getElementById('messenger-chat-window');
+                            const isChatOpen = chatWindow && chatWindow.classList.contains('open');
+                            const isCurrentConversation = selectedUserId === user.id;
+
+                            // Play notification if chat is closed or different conversation is open
+                            if (!isChatOpen || !isCurrentConversation) {
+                                playNotificationSound();
+                            }
+
+                            // Mark message as seen
+                            seenIds.add(messageId);
+                            try {
+                                sessionStorage.setItem(conversationKey, JSON.stringify(Array.from(seenIds)));
+                            } catch (e) {
+                                console.warn('[Messenger] Could not save seen message IDs:', e);
+                            }
+                        }
+                    }
+                });
+            }, (error) => {
+                console.error('[Messenger] Error listening to messages for conversation:', conversationId, error);
+            });
+
+            // Store unsubscribe function
+            globalMessageListeners.set(conversationId, unsubscribe);
+        } catch (error) {
+            console.error('[Messenger] Error setting up listener for conversation:', conversationId, error);
+        }
+    });
+}
+
+// Clean up listeners when users go offline
+function cleanupMessageListeners() {
+    // Remove listeners for users who are no longer online
+    const activeUserIds = new Set(onlineUsers.map(u => u.id));
+    globalMessageListeners.forEach((unsubscribe, conversationId) => {
+        const userIds = conversationId.split('_');
+        const otherUserId = userIds.find(id => id !== userEmail);
+        if (otherUserId && !activeUserIds.has(otherUserId)) {
+            unsubscribe();
+            globalMessageListeners.delete(conversationId);
+        }
+    });
 }
 
 // Initialize when DOM is ready
@@ -1254,6 +1603,20 @@ if (document.readyState === 'loading') {
                 console.log('[Messenger] Waiting for agent data to be set...');
             }
         }, 2000);
+    }
+}
+
+// Play notification sound
+function playNotificationSound() {
+    try {
+        const audio = new Audio('notification.mp3');
+        audio.volume = 0.7; // Set volume to 70%
+        audio.play().catch(error => {
+            console.warn('[Messenger] Could not play notification sound:', error);
+            // Silently fail - notification sound is optional
+        });
+    } catch (error) {
+        console.warn('[Messenger] Error creating notification audio:', error);
     }
 }
 

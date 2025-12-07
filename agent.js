@@ -494,46 +494,34 @@ async function loadAssignedVotersSection() {
                     <td style="padding: 14px 16px; font-size: 13px; color: var(--text-color);">${voter.number || voter.phone || 'N/A'}</td>
                     <td style="padding: 14px 16px;">${pledgeStatusHtml}</td>
                     <td style="padding: 14px 16px; text-align: center; position: relative;">
-                        <div class="agent-voter-actions-wrapper" data-voter-id="${voter.id}">
-                            <button type="button" class="agent-voter-actions-btn" data-voter-id="${voter.id}" aria-label="Voter actions menu">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="1"></circle>
-                                    <circle cx="12" cy="5" r="1"></circle>
-                                    <circle cx="12" cy="19" r="1"></circle>
-                                </svg>
-                            </button>
-                            <div class="agent-voter-actions-menu" data-menu-for="${voter.id}">
-                                <button type="button" class="agent-voter-action-item ${currentPledge === 'yes' ? 'disabled' : ''}" data-action="positive" data-voter-id="${voter.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <div class="agent-voter-actions-inline" data-voter-id="${voter.id}">
+                            <div class="agent-pledge-actions-group">
+                                <button type="button" class="agent-pledge-btn agent-pledge-btn-positive ${currentPledge === 'yes' ? 'active' : ''}" data-action="positive" data-voter-id="${voter.id}" title="Mark as Positive">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                     </svg>
-                                    <span>Mark as Positive</span>
                                 </button>
-                                <button type="button" class="agent-voter-action-item ${currentPledge === 'no' ? 'disabled' : ''}" data-action="negative" data-voter-id="${voter.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <button type="button" class="agent-pledge-btn agent-pledge-btn-negative ${currentPledge === 'no' ? 'active' : ''}" data-action="negative" data-voter-id="${voter.id}" title="Mark as Negative">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="12" cy="12" r="10"></circle>
                                         <line x1="15" y1="9" x2="9" y2="15"></line>
                                         <line x1="9" y1="9" x2="15" y2="15"></line>
                                     </svg>
-                                    <span>Mark as Negative</span>
                                 </button>
-                                <button type="button" class="agent-voter-action-item ${currentPledge === 'undecided' ? 'disabled' : ''}" data-action="undecided" data-voter-id="${voter.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <button type="button" class="agent-pledge-btn agent-pledge-btn-undecided ${currentPledge === 'undecided' ? 'active' : ''}" data-action="undecided" data-voter-id="${voter.id}" title="Mark as Undecided">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="12" cy="12" r="10"></circle>
                                         <line x1="12" y1="8" x2="12" y2="12"></line>
                                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                                     </svg>
-                                    <span>Mark as Undecided</span>
-                                </button>
-                                <div class="agent-voter-menu-divider"></div>
-                                <button type="button" class="agent-voter-action-item" data-action="remark" data-voter-id="${voter.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                    </svg>
-                                    <span>Add Remark</span>
                                 </button>
                             </div>
+                            <button type="button" class="agent-remark-btn" data-action="remark" data-voter-id="${voter.id}" title="Add Remark">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -591,7 +579,36 @@ async function loadAssignedVotersSection() {
             return;
         }
 
-        // Handle action button click
+        // Handle action button click (both old menu style and new inline style)
+        const pledgeBtn = e.target.closest('.agent-pledge-btn, .agent-remark-btn');
+        if (pledgeBtn) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const voterId = pledgeBtn.getAttribute('data-voter-id');
+            const action = pledgeBtn.getAttribute('data-action');
+
+            // Execute action
+            if (action === 'positive') {
+                if (typeof quickUpdatePledge === 'function') {
+                    quickUpdatePledge(voterId, 'yes');
+                }
+            } else if (action === 'negative') {
+                if (typeof quickUpdatePledge === 'function') {
+                    quickUpdatePledge(voterId, 'no');
+                }
+            } else if (action === 'undecided') {
+                if (typeof quickUpdatePledge === 'function') {
+                    quickUpdatePledge(voterId, 'undecided');
+                }
+            } else if (action === 'remark') {
+                if (typeof addRemarkForVoter === 'function') {
+                    addRemarkForVoter(voterId);
+                }
+            }
+            return;
+        }
+
         if (actionBtn && !actionBtn.classList.contains('disabled')) {
             e.stopPropagation();
             e.preventDefault();
@@ -766,6 +783,7 @@ async function quickUpdatePledge(voterId, pledgeStatus) {
 
         // Send notification to campaign manager (non-blocking)
         try {
+            console.log('[Pledge Update] Attempting to send notification...');
             await notifyCampaignManager({
                 type: 'pledge',
                 title: 'Pledge Updated',
@@ -773,9 +791,16 @@ async function quickUpdatePledge(voterId, pledgeStatus) {
                 agentId: currentAgentData.id,
                 agentName: currentAgentData.name
             });
+            console.log('[Pledge Update] Notification sent successfully');
         } catch (notifError) {
-            console.warn('Failed to send notification (non-critical):', notifError);
-            // Continue even if notification fails
+            console.error('[Pledge Update] Failed to send notification:', notifError);
+            console.error('[Pledge Update] Notification error details:', {
+                code: notifError.code,
+                message: notifError.message,
+                campaignEmail: window.campaignEmail,
+                agentId: currentAgentData.id
+            });
+            // Continue even if notification fails - don't block pledge update
         }
 
         // Reload table
@@ -1510,7 +1535,22 @@ async function saveAgentRemark(voterId) {
 
 // Notify campaign manager
 async function notifyCampaignManager(notificationData) {
-    if (!db || !window.campaignEmail) return;
+    if (!db) {
+        console.error('[Notification] Database not initialized');
+        return;
+    }
+
+    if (!window.campaignEmail) {
+        console.error('[Notification] Campaign email not set. Current agent data:', currentAgentData);
+        // Try to get campaign email from agent data
+        if (currentAgentData && (currentAgentData.campaignEmail || currentAgentData.email)) {
+            window.campaignEmail = currentAgentData.campaignEmail || currentAgentData.email;
+            console.log('[Notification] Using campaign email from agent data:', window.campaignEmail);
+        } else {
+            console.error('[Notification] Cannot send notification - no campaign email available');
+            return;
+        }
+    }
 
     try {
         const notification = {
@@ -1525,11 +1565,26 @@ async function notifyCampaignManager(notificationData) {
             createdAt: serverTimestamp()
         };
 
-        await addDoc(collection(db, 'notifications'), notification);
+        console.log('[Notification] Sending notification to campaign manager:', {
+            recipientEmail: window.campaignEmail,
+            title: notification.title,
+            message: notification.message,
+            type: notification.type
+        });
+
+        const docRef = await addDoc(collection(db, 'notifications'), notification);
+        console.log('[Notification] Notification sent successfully with ID:', docRef.id);
 
     } catch (error) {
-        console.error('Error sending notification:', error);
-        // Non-critical, don't show error to agent
+        console.error('[Notification] Error sending notification:', error);
+        console.error('[Notification] Error details:', {
+            code: error.code,
+            message: error.message,
+            campaignEmail: window.campaignEmail,
+            notificationData: notificationData
+        });
+        // Re-throw error so caller can handle it if needed
+        throw error;
     }
 }
 

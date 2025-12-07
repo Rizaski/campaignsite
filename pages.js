@@ -952,6 +952,9 @@ const pageTemplates = {
             </div>
             
             <div class="settings-section">
+            </div>
+            
+            <div class="settings-section">
                 <h2>Zero Day Management</h2>
                 <div class="settings-card">
                     <div class="setting-item">
@@ -2194,7 +2197,12 @@ const debouncedRefresh = debounce((tableType) => {
                 if (typeof loadCallsData === 'function') loadCallsData(true);
                 break;
             case 'pledges':
-                if (typeof loadPledgesData === 'function') loadPledgesData(true);
+                console.log('[Real-time Sync] Debounced refresh: Loading pledges data...');
+                if (typeof loadPledgesData === 'function') {
+                    loadPledgesData(true);
+                } else {
+                    console.warn('[Real-time Sync] loadPledgesData function not found in debounced refresh');
+                }
                 break;
             case 'agents':
                 if (typeof loadAgentsData === 'function') loadAgentsData(true);
@@ -2243,13 +2251,34 @@ async function setupRealtimeListener(collectionName, tableType) {
         } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
         // Determine the email field to use
-        const emailField = collectionName === 'voters' ? 'email' :
-            (collectionName === 'events' || collectionName === 'calls') ? 'campaignEmail' : 'email';
-
-        const collectionQuery = query(
-            collection(window.db, collectionName),
-            where(emailField, '==', window.userEmail)
-        );
+        // For voters, we need to handle both 'email' and 'campaignEmail' fields
+        let collectionQuery;
+        let emailField; // Define emailField outside if/else for logging
+        if (collectionName === 'voters') {
+            // Try email field first, but we'll handle both in the listener
+            emailField = 'email';
+            collectionQuery = query(
+                collection(window.db, collectionName),
+                where('email', '==', window.userEmail)
+            );
+        } else {
+            // For pledges, events, and calls, use 'email' field (pledges use 'email' set to campaign manager's email)
+            // Events and calls use 'campaignEmail', but we'll handle pledges separately
+            if (collectionName === 'pledges') {
+                emailField = 'email';
+                collectionQuery = query(
+                    collection(window.db, collectionName),
+                    where('email', '==', window.userEmail)
+                );
+                console.log(`[Real-time Sync] Pledges listener configured to listen for email: ${window.userEmail}`);
+            } else {
+                emailField = (collectionName === 'events' || collectionName === 'calls') ? 'campaignEmail' : 'email';
+                collectionQuery = query(
+                    collection(window.db, collectionName),
+                    where(emailField, '==', window.userEmail)
+                );
+            }
+        }
 
         let isInitialLoad = true;
 
@@ -2260,14 +2289,31 @@ async function setupRealtimeListener(collectionName, tableType) {
                 if (isInitialLoad) {
                     isInitialLoad = false;
                     console.log(`[Real-time Sync] ${tableType} initial snapshot received (${snapshot.size} items) - listener is now active`);
-                    // Don't return - process initial snapshot to ensure cache is up to date
-                    // But don't trigger UI refresh on initial load
+
+                    // For agents, don't update cache on initial load - let loadAgentsData handle it with stats
+                    if (tableType === 'agents') {
+                        console.log(`[Real-time Sync] Agents initial snapshot - skipping cache update (will be handled by loadAgentsData)`);
+                        return;
+                    }
+
+                    // For other tables, update cache with initial snapshot
                     const dataArray = [];
                     snapshot.forEach(doc => {
-                        dataArray.push({
-                            id: doc.id,
-                            ...doc.data()
-                        });
+                        const data = doc.data();
+                        // For voters, filter by both email and campaignEmail
+                        if (tableType === 'voters') {
+                            if (data.email === window.userEmail || data.campaignEmail === window.userEmail) {
+                                dataArray.push({
+                                    id: doc.id,
+                                    ...data
+                                });
+                            }
+                        } else {
+                            dataArray.push({
+                                id: doc.id,
+                                ...data
+                            });
+                        }
                     });
                     if (dataCache[tableType]) {
                         dataCache[tableType].data = dataArray;
@@ -2288,6 +2334,27 @@ async function setupRealtimeListener(collectionName, tableType) {
 
                 // Check for actual changes (not just initial load)
                 snapshot.docChanges().forEach((change) => {
+                    // For voters, filter by email/campaignEmail match
+                    if (tableType === 'voters') {
+                        const data = change.doc.data();
+                        if (data.email !== window.userEmail && data.campaignEmail !== window.userEmail) {
+                            // Skip this change - doesn't match user's email
+                            return;
+                        }
+                    }
+                    // For pledges, the query already filters by email, but log for debugging
+                    if (tableType === 'pledges') {
+                        const data = change.doc.data();
+                        console.log(`[Real-time Sync] Pledge change detected:`, {
+                            type: change.type,
+                            pledgeId: change.doc.id,
+                            email: data.email,
+                            userEmail: window.userEmail,
+                            voterName: data.voterName,
+                            agentName: data.agentName
+                        });
+                    }
+
                     hasChanges = true;
                     if (change.type === 'added') {
                         changeCount.added++;
@@ -2309,21 +2376,90 @@ async function setupRealtimeListener(collectionName, tableType) {
                 // Show sync notification
                 showSyncNotification(tableType, changeCount);
 
-                // Update cache with new data
-                const dataArray = [];
-                snapshot.forEach(doc => {
-                    dataArray.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
-                });
+                // For agents, we need to trigger full reload to recalculate stats
+                // Don't update cache directly for agents - let loadAgentsData handle it
+                if (tableType === 'agents') {
+                    console.log(`[Real-time Sync] Agents changed - triggering full reload to recalculate stats...`);
+                    // Clear cache to force full reload
+                    clearCache('agents');
+                    // Trigger immediate refresh
+                    const tableBody = document.getElementById('agents-table-body');
+                    if (tableBody && tableBody.offsetParent !== null) {
+                        setTimeout(() => {
+                            if (typeof loadAgentsData === 'function') {
+                                loadAgentsData(true);
+                            }
+                        }, 100);
+                    }
+                    return; // Skip cache update for agents
+                }
 
-                // Update cache
-                if (dataCache[tableType]) {
-                    dataCache[tableType].data = dataArray;
-                    dataCache[tableType].timestamp = Date.now();
-                    dataCache[tableType].userEmail = window.userEmail;
-                    console.log(`[Real-time Sync] ${tableType} cache updated with ${dataArray.length} items`);
+                // Update cache with new data (for other table types)
+                // For pledges, maintain the structured cache format
+                if (tableType === 'pledges') {
+                    // For pledges, we need to maintain the structured format with pledges array
+                    const pledgesArray = [];
+                    snapshot.forEach(doc => {
+                        pledgesArray.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    // Preserve existing cache structure or create new one
+                    if (dataCache.pledges && dataCache.pledges.data && typeof dataCache.pledges.data === 'object' && !Array.isArray(dataCache.pledges.data)) {
+                        // Update existing structured cache
+                        dataCache.pledges.data.pledges = pledgesArray;
+                        dataCache.pledges.data.voterDataMap = dataCache.pledges.data.voterDataMap || [];
+                        // Recalculate stats
+                        let yes = 0,
+                            no = 0,
+                            undecided = 0;
+                        pledgesArray.forEach(pledge => {
+                            const status = (pledge.pledge || '').toLowerCase();
+                            if (status === 'yes' || status.includes('yes')) yes++;
+                            else if (status === 'no' || status === 'negative' || status.includes('no')) no++;
+                            else undecided++;
+                        });
+                        dataCache.pledges.data.stats = {
+                            yes,
+                            no,
+                            undecided,
+                            total: pledgesArray.length
+                        };
+                    } else {
+                        // Create new structured cache
+                        dataCache.pledges.data = {
+                            pledges: pledgesArray,
+                            voterDataMap: [],
+                            stats: {
+                                yes: 0,
+                                no: 0,
+                                undecided: 0,
+                                total: pledgesArray.length
+                            }
+                        };
+                    }
+                    dataCache.pledges.timestamp = Date.now();
+                    dataCache.pledges.userEmail = window.userEmail;
+                    console.log(`[Real-time Sync] ${tableType} cache updated with ${pledgesArray.length} items (structured format)`);
+                } else {
+                    // For other table types, use simple array format
+                    const dataArray = [];
+                    snapshot.forEach(doc => {
+                        dataArray.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    // Update cache
+                    if (dataCache[tableType]) {
+                        dataCache[tableType].data = dataArray;
+                        dataCache[tableType].timestamp = Date.now();
+                        dataCache[tableType].userEmail = window.userEmail;
+                        console.log(`[Real-time Sync] ${tableType} cache updated with ${dataArray.length} items`);
+                    }
                 }
 
                 // Always refresh UI - debouncedRefresh will check if table is visible
@@ -2344,7 +2480,12 @@ async function setupRealtimeListener(collectionName, tableType) {
                                 if (typeof loadCallsData === 'function') loadCallsData(true);
                                 break;
                             case 'pledges':
-                                if (typeof loadPledgesData === 'function') loadPledgesData(true);
+                                console.log('[Real-time Sync] Force refreshing pledges table immediately...');
+                                if (typeof loadPledgesData === 'function') {
+                                    loadPledgesData(true);
+                                } else {
+                                    console.warn('[Real-time Sync] loadPledgesData function not found');
+                                }
                                 break;
                             case 'events':
                                 if (typeof loadEventsData === 'function') loadEventsData(true);
@@ -2386,7 +2527,13 @@ async function setupRealtimeListener(collectionName, tableType) {
         );
 
         window.realtimeListeners[tableType] = unsubscribe;
-        console.log(`[Real-time Sync] Listener set up for ${tableType} (collection: ${collectionName}, emailField: ${emailField})`);
+        console.log(`[Real-time Sync] Listener set up for ${tableType} (collection: ${collectionName}, emailField: ${emailField}, userEmail: ${window.userEmail})`);
+
+        // For pledges, log additional info to help debug agent-created pledges
+        if (tableType === 'pledges') {
+            console.log(`[Real-time Sync] Pledges listener configured to listen for email: ${window.userEmail}`);
+            console.log(`[Real-time Sync] Agents should create pledges with email field set to campaign manager's email (${window.userEmail})`);
+        }
     } catch (error) {
         console.error(`[Real-time Sync] Failed to setup listener for ${tableType} (collection: ${collectionName}):`, error);
         console.error(`[Real-time Sync] Error setting up listener for ${tableType}:`, error);
@@ -2666,22 +2813,73 @@ function clearAllCaches() {
 
 // Function to render cached data immediately (optimized for instant display)
 function renderCachedVotersData() {
-    if (!voterDataCache.data) return false;
+    if (!voterDataCache.data) {
+        console.warn('[renderCachedVotersData] No cache data available');
+        return false;
+    }
 
     const tbody = document.getElementById('voters-table-body');
-    if (!tbody) return false;
+    if (!tbody) {
+        console.warn('[renderCachedVotersData] Table body not found');
+        return false;
+    }
 
     const {
         filteredDocs: allDocs,
         stats
-    } = voterDataCache.data;
+    } = voterDataCache.data || {};
+
+    // Safety check: ensure allDocs is an array
+    if (!Array.isArray(allDocs)) {
+        console.warn('[renderCachedVotersData] Cache data structure invalid, clearing cache and reloading...');
+        clearVoterCache();
+        if (typeof loadVotersData === 'function') {
+            loadVotersData(true);
+        }
+        return false;
+    }
+
+    // Safety check: if stats is missing, calculate it from the data
+    let safeStats = stats;
+    if (!safeStats || typeof safeStats !== 'object') {
+        console.warn('[renderCachedVotersData] Stats missing from cache, calculating from data...');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let total = 0;
+        let todayCount = 0;
+        let verified = 0;
+        let pending = 0;
+
+        if (allDocs && Array.isArray(allDocs)) {
+            allDocs.forEach(({
+                data
+            }) => {
+                total++;
+                if (data.verified) verified++;
+                else pending++;
+
+                if (data.registeredAt) {
+                    const regDate = data.registeredAt.toDate ? data.registeredAt.toDate() : new Date(data.registeredAt);
+                    if (regDate >= today) todayCount++;
+                }
+            });
+        }
+
+        safeStats = {
+            total,
+            todayCount,
+            verified,
+            pending
+        };
+    }
 
     // Apply search filter
     const searchInput = document.getElementById('voter-search');
     const searchTerm = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
 
-    let filteredDocs = allDocs;
-    if (searchTerm) {
+    let filteredDocs = allDocs || [];
+    if (searchTerm && Array.isArray(allDocs)) {
         filteredDocs = allDocs.filter(({
             data
         }) => {
@@ -2707,10 +2905,10 @@ function renderCachedVotersData() {
     const verifiedEl = document.getElementById('stat-voters-verified');
     const pendingEl = document.getElementById('stat-voters-pending');
 
-    if (totalEl) totalEl.textContent = stats.total;
-    if (todayEl) todayEl.textContent = stats.todayCount;
-    if (verifiedEl) verifiedEl.textContent = stats.verified;
-    if (pendingEl) pendingEl.textContent = stats.pending;
+    if (totalEl) totalEl.textContent = safeStats.total || 0;
+    if (todayEl) todayEl.textContent = safeStats.todayCount || 0;
+    if (verifiedEl) verifiedEl.textContent = safeStats.verified || 0;
+    if (pendingEl) pendingEl.textContent = safeStats.pending || 0;
 
     // Reset to first page when searching
     if (searchTerm) {
@@ -2842,31 +3040,107 @@ async function loadVotersData(forceRefresh = false) {
             or
         } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        // Query voters by email (voters use 'email' field, not 'campaignEmail')
-        // Also check for campaignEmail as fallback
-        let votersQuery = query(collection(window.db, 'voters'), where('email', '==', window.userEmail));
+        // Query voters by email or campaignEmail (voters can use either field)
+        let votersQuery;
         let snapshot;
 
         console.log('[loadVotersData] Starting to fetch voters from Firebase...');
+        console.log('[loadVotersData] User email:', window.userEmail);
         const startTime = performance.now();
 
         try {
-
             if (window.updateComponentProgress) {
                 window.updateComponentProgress('voters', 30);
             }
 
-            snapshot = await getDocs(votersQuery);
+            // Query voters by both email and campaignEmail fields
+            // Firestore doesn't support OR queries, so we need to query both and combine
+            const emailDocs = [];
+            const campaignEmailDocs = [];
+            const allDocIds = new Set();
+
+            // Query by 'email' field
+            try {
+                votersQuery = query(collection(window.db, 'voters'), where('email', '==', window.userEmail));
+                const emailSnapshot = await getDocs(votersQuery);
+                emailSnapshot.docs.forEach(doc => {
+                    if (!allDocIds.has(doc.id)) {
+                        emailDocs.push(doc);
+                        allDocIds.add(doc.id);
+                    }
+                });
+                console.log(`[loadVotersData] Query by 'email' returned ${emailSnapshot.docs.length} documents`);
+            } catch (emailQueryError) {
+                console.warn('[loadVotersData] Query by email failed:', emailQueryError);
+            }
+
+            // Query by 'campaignEmail' field
+            try {
+                votersQuery = query(collection(window.db, 'voters'), where('campaignEmail', '==', window.userEmail));
+                const campaignSnapshot = await getDocs(votersQuery);
+                campaignSnapshot.docs.forEach(doc => {
+                    if (!allDocIds.has(doc.id)) {
+                        campaignEmailDocs.push(doc);
+                        allDocIds.add(doc.id);
+                    }
+                });
+                console.log(`[loadVotersData] Query by 'campaignEmail' returned ${campaignSnapshot.docs.length} documents`);
+            } catch (campaignQueryError) {
+                console.warn('[loadVotersData] Query by campaignEmail failed:', campaignQueryError);
+            }
+
+            // Combine results (avoiding duplicates)
+            const combinedDocs = [...emailDocs, ...campaignEmailDocs];
+            snapshot = {
+                docs: combinedDocs
+            };
+            console.log(`[loadVotersData] Combined results: ${combinedDocs.length} unique voters found`);
+
+            // If still no results, try loading all and filtering client-side (fallback for debugging)
+            if (combinedDocs.length === 0) {
+                console.log('[loadVotersData] No results from queries, trying fallback: loading all voters and filtering client-side');
+                try {
+                    const allVotersQuery = query(collection(window.db, 'voters'));
+                    const allSnapshot = await getDocs(allVotersQuery);
+                    console.log(`[loadVotersData] Loaded ${allSnapshot.docs.length} total voters, filtering by email...`);
+
+                    // Filter client-side
+                    const filtered = allSnapshot.docs.filter(doc => {
+                        const data = doc.data();
+                        return data.email === window.userEmail || data.campaignEmail === window.userEmail;
+                    });
+                    console.log(`[loadVotersData] After client-side filtering: ${filtered.length} voters match`);
+
+                    // Log sample data for debugging
+                    if (allSnapshot.docs.length > 0 && filtered.length === 0) {
+                        const sampleDoc = allSnapshot.docs[0];
+                        const sampleData = sampleDoc.data();
+                        console.log('[loadVotersData] Sample voter from database:', {
+                            email: sampleData.email,
+                            campaignEmail: sampleData.campaignEmail,
+                            userEmail: window.userEmail,
+                            name: sampleData.name
+                        });
+                    }
+
+                    snapshot = {
+                        docs: filtered
+                    };
+                } catch (fallbackError) {
+                    console.error('[loadVotersData] Fallback query also failed:', fallbackError);
+                    throw fallbackError;
+                }
+            }
+
             const fetchTime = performance.now() - startTime;
             console.log(`[loadVotersData] Fetched ${snapshot.docs.length} documents in ${fetchTime.toFixed(2)}ms`);
-
 
             if (window.updateComponentProgress) {
                 window.updateComponentProgress('voters', 50);
             }
         } catch (queryError) {
             console.error('Error querying voters:', queryError);
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-light);">Error loading voters</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-light);">Error loading voters. Please check console for details.</td></tr>';
             // Mark voters as complete even on error
             if (window.updateComponentProgress) {
                 window.updateComponentProgress('voters', 100);
@@ -2877,7 +3151,19 @@ async function loadVotersData(forceRefresh = false) {
         // Filter to ensure we only show voters matching user email (in case of data inconsistency)
         const filteredDocs = snapshot.docs.filter(doc => {
             const data = doc.data();
-            return data.email === window.userEmail || data.campaignEmail === window.userEmail;
+            const matches = data.email === window.userEmail || data.campaignEmail === window.userEmail;
+            if (!matches && snapshot.docs.length > 0) {
+                // Log first non-matching voter for debugging
+                if (snapshot.docs.indexOf(doc) === 0) {
+                    console.log('[loadVotersData] Sample voter data:', {
+                        email: data.email,
+                        campaignEmail: data.campaignEmail,
+                        userEmail: window.userEmail,
+                        name: data.name
+                    });
+                }
+            }
+            return matches;
         });
 
         console.log(`[loadVotersData] Processing ${filteredDocs.length} voters...`);
@@ -3268,15 +3554,22 @@ async function viewEventDetails(eventId, navigateDirection = null) {
             modalOverlay.className = 'modal-overlay';
             modalOverlay.style.display = 'none';
             modalOverlay.innerHTML = `
-                <div class="modal-container">
+                <div class="modal-container" id="modal-container">
                     <div class="modal-header">
                         <h2 id="modal-title">Modal Title</h2>
-                        <button class="modal-close" id="modal-close-btn" onclick="if (typeof closeModal === 'function') closeModal(); else document.getElementById('modal-overlay').style.display = 'none';">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
-                        </button>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="modal-maximize" id="modal-maximize-btn" title="Maximize" onclick="if (typeof toggleModalMaximize === 'function') { const container = this.closest('.modal-container'); toggleModalMaximize(container, this); }">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                </svg>
+                            </button>
+                            <button class="modal-close" id="modal-close-btn" onclick="if (typeof closeModal === 'function') closeModal(); else document.getElementById('modal-overlay').style.display = 'none';">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div class="modal-body" id="modal-body"></div>
                 </div>
@@ -3427,6 +3720,40 @@ async function viewEventDetails(eventId, navigateDirection = null) {
         // Create modal HTML
         const modalHTML = `
             <div class="event-details-modal" style="max-width: 600px; margin: 0 auto;">
+                <!-- Actions at top -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            onclick="closeModal()"
+                            style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                            Close
+                        </button>
+                        <button 
+                            class="btn-primary btn-compact" 
+                            onclick="closeModal(); setTimeout(() => { if (window.openModal) window.openModal('event', '${eventId}'); }, 100);"
+                            style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit Event
+                        </button>
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            onclick="deleteEvent('${eventId}')"
+                            style="display: flex; align-items: center; gap: 6px; color: var(--danger-color); border-color: var(--danger-color); white-space: nowrap;"
+                            onmouseover="this.style.background='rgba(220, 38, 38, 0.1)'"
+                            onmouseout="this.style.background='transparent'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Delete Event
+                        </button>
+                    </div>
+                </div>
+
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     <div style="width: 80px; height: 80px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; border: 3px solid var(--primary-color);">
                         <span style="font-size: 32px; line-height: 1;">${eventDate.getDate()}</span>
@@ -3501,70 +3828,36 @@ async function viewEventDetails(eventId, navigateDirection = null) {
                     </div>
                 </div>
 
-                <!-- Actions -->
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color);">
-                    <button 
-                        class="btn-secondary btn-compact" 
-                        onclick="deleteEvent('${eventId}')"
-                        style="display: flex; align-items: center; gap: 6px; color: var(--danger-color); border-color: var(--danger-color);"
-                        onmouseover="this.style.background='rgba(220, 38, 38, 0.1)'"
-                        onmouseout="this.style.background='transparent'">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        Delete Event
-                    </button>
-                    <div style="display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                        <!-- Navigation -->
-                        ${allEvents.length > 1 ? `
-                        <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                            <button 
-                                class="btn-secondary btn-compact" 
-                                ${currentIndex === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-                                onclick="viewEventDetails('${eventId}', 'prev')"
-                                style="display: flex; align-items: center; gap: 6px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="15 18 9 12 15 6"></polyline>
-                                </svg>
-                                Previous
-                            </button>
-                            <span style="color: var(--text-light); font-size: 12px; padding: 8px 8px; display: flex; align-items: center; white-space: nowrap; flex-shrink: 0;">
-                                ${currentIndex + 1} of ${allEvents.length}
-                            </span>
-                            <button 
-                                class="btn-secondary btn-compact" 
-                                ${currentIndex === allEvents.length - 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-                                onclick="viewEventDetails('${eventId}', 'next')"
-                                style="display: flex; align-items: center; gap: 6px;">
-                                Next
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-                        </div>
-                        ` : '<div></div>'}
-                        <!-- Actions -->
-                        <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                            <button 
-                                class="btn-secondary btn-compact" 
-                                onclick="closeModal()"
-                                style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                                Close
-                            </button>
-                            <button 
-                                class="btn-primary btn-compact" 
-                                onclick="closeModal(); setTimeout(() => { if (window.openModal) window.openModal('event', '${eventId}'); }, 100);"
-                                style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                                Edit Event
-                            </button>
-                        </div>
+                <!-- Navigation at bottom -->
+                ${allEvents.length > 1 ? `
+                <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            ${currentIndex === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+                            onclick="viewEventDetails('${eventId}', 'prev')"
+                            style="display: flex; align-items: center; gap: 6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Previous
+                        </button>
+                        <span style="color: var(--text-light); font-size: 12px; padding: 8px 8px; display: flex; align-items: center; white-space: nowrap; flex-shrink: 0;">
+                            ${currentIndex + 1} of ${allEvents.length}
+                        </span>
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            ${currentIndex === allEvents.length - 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+                            onclick="viewEventDetails('${eventId}', 'next')"
+                            style="display: flex; align-items: center; gap: 6px;">
+                            Next
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
                     </div>
                 </div>
+                ` : ''}
             </div>
         `;
 
@@ -3911,10 +4204,35 @@ function updatePledgeStatistics(snapshot) {
 
 // Load pledges data
 async function loadPledgesData(forceRefresh = false) {
-    if (!window.db || !window.userEmail) return;
+    console.log('[loadPledgesData] Starting to load pledges data', {
+        hasDb: !!window.db,
+        userEmail: window.userEmail,
+        forceRefresh
+    });
+
+    if (!window.db) {
+        console.error('[loadPledgesData] Database not initialized');
+        const tbody = document.getElementById('pledges-table-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--text-light);">Database not initialized. Please refresh the page.</td></tr>';
+        }
+        return;
+    }
+
+    if (!window.userEmail) {
+        console.error('[loadPledgesData] userEmail not set');
+        const tbody = document.getElementById('pledges-table-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--text-light);">User email not available. Please log in again.</td></tr>';
+        }
+        return;
+    }
 
     const tbody = document.getElementById('pledges-table-body');
-    if (!tbody) return;
+    if (!tbody) {
+        console.error('[loadPledgesData] Pledges table body not found');
+        return;
+    }
 
     // Setup real-time listener for pledge statistics (only once)
     if (!window.pledgesStatsListener && !forceRefresh) {
@@ -3932,8 +4250,6 @@ async function loadPledgesData(forceRefresh = false) {
     showTableSkeleton(tbody, 5, 9);
 
     try {
-        (tbody, 10);
-
         const {
             collection,
             query,
@@ -3943,15 +4259,55 @@ async function loadPledgesData(forceRefresh = false) {
             getDoc
         } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        (tbody, 30);
+        console.log('[loadPledgesData] Querying pledges for email:', window.userEmail);
+
+        // First, let's check if there are any pledges at all (for debugging)
+        const allPledgesQuery = query(collection(window.db, 'pledges'));
+        try {
+            const allPledgesSnapshot = await getDocs(allPledgesQuery);
+            console.log('[loadPledgesData] Total pledges in database:', allPledgesSnapshot.size);
+            if (allPledgesSnapshot.size > 0) {
+                // Log first few pledges to see what email field they have
+                const samplePledges = allPledgesSnapshot.docs.slice(0, 3);
+                samplePledges.forEach((doc, index) => {
+                    const data = doc.data();
+                    console.log(`[loadPledgesData] Sample pledge ${index + 1}:`, {
+                        id: doc.id,
+                        email: data.email,
+                        campaignEmail: data.campaignEmail,
+                        voterName: data.voterName,
+                        agentName: data.agentName
+                    });
+                });
+            }
+        } catch (debugError) {
+            console.warn('[loadPledgesData] Could not fetch all pledges for debugging:', debugError);
+        }
 
         const pledgesQuery = query(collection(window.db, 'pledges'), where('email', '==', window.userEmail));
         let snapshot;
 
         try {
             snapshot = await getDocs(pledgesQuery);
+            console.log('[loadPledgesData] Query successful, found', snapshot.size, 'pledges for email:', window.userEmail);
+
+            // If no results, try querying with campaignEmail field as fallback
+            if (snapshot.empty) {
+                console.log('[loadPledgesData] No pledges found with email field, trying campaignEmail field...');
+                const fallbackQuery = query(collection(window.db, 'pledges'), where('campaignEmail', '==', window.userEmail));
+                try {
+                    const fallbackSnapshot = await getDocs(fallbackQuery);
+                    console.log('[loadPledgesData] Fallback query found', fallbackSnapshot.size, 'pledges with campaignEmail field');
+                    if (!fallbackSnapshot.empty) {
+                        snapshot = fallbackSnapshot;
+                        console.log('[loadPledgesData] Using fallback query results');
+                    }
+                } catch (fallbackError) {
+                    console.warn('[loadPledgesData] Fallback query failed:', fallbackError);
+                }
+            }
         } catch (queryError) {
-            console.error('Error querying pledges:', queryError);
+            console.error('[loadPledgesData] Error querying pledges:', queryError);
             // If index missing, try alternative query or show helpful message
             if (queryError.code === 'failed-precondition' && queryError.message.includes('index')) {
                 throw new Error('Firestore index required. Please create the required index as shown in the browser console.');
@@ -3959,13 +4315,11 @@ async function loadPledgesData(forceRefresh = false) {
             throw queryError;
         }
 
-        (tbody, 50);
-
         // Update statistics (initial load - real-time updates handled by listener)
         updatePledgeStatistics(snapshot);
 
         if (snapshot.empty) {
-            (tbody, 100);
+            console.log('[loadPledgesData] No pledges found for email:', window.userEmail);
             setTimeout(() => {
                 tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--text-light);">No pledges recorded yet</td></tr>';
                 renderPagination('pledges', 0);
@@ -3973,7 +4327,7 @@ async function loadPledgesData(forceRefresh = false) {
             return;
         }
 
-        (tbody, 70);
+        console.log('[loadPledgesData] Processing', snapshot.size, 'pledges');
 
         // Pagination - slice docs before processing
         const state = paginationState.pledges;
@@ -4198,11 +4552,50 @@ function renderCachedPledgesData() {
     const tbody = document.getElementById('pledges-table-body');
     if (!tbody) return false;
 
-    const {
-        pledges: allPledges,
-        voterDataMap: voterDataMapEntries,
-        stats
-    } = dataCache.pledges.data;
+    // Safety check: ensure cache data structure is valid
+    // Handle different cache structures - be more flexible
+    let allPledges = [];
+    let voterDataMapEntries = [];
+    let stats = null;
+
+    const cacheData = dataCache.pledges.data;
+
+    if (Array.isArray(cacheData)) {
+        // Old format: cache is directly an array
+        allPledges = cacheData;
+        console.log('[renderCachedPledgesData] Using old cache format (array), found', allPledges.length, 'pledges');
+    } else if (cacheData && typeof cacheData === 'object') {
+        // New format: cache is an object with pledges, voterDataMap, stats
+        allPledges = cacheData.pledges || cacheData.data || [];
+        voterDataMapEntries = cacheData.voterDataMap || [];
+        stats = cacheData.stats || null;
+        console.log('[renderCachedPledgesData] Using new cache format (object), found', allPledges.length, 'pledges');
+    } else {
+        // Invalid cache - clear it and force refresh
+        console.error('[renderCachedPledgesData] Invalid cache data structure, clearing cache:', cacheData);
+        clearCache('pledges');
+        // Force a fresh load
+        setTimeout(() => {
+            if (typeof loadPledgesData === 'function') {
+                loadPledgesData(true);
+            }
+        }, 100);
+        return false;
+    }
+
+    // Safety check: ensure allPledges is an array
+    if (!Array.isArray(allPledges)) {
+        console.error('[renderCachedPledgesData] Invalid pledges array in cache, clearing cache:', allPledges);
+        clearCache('pledges');
+        // Force a fresh load
+        setTimeout(() => {
+            if (typeof loadPledgesData === 'function') {
+                loadPledgesData(true);
+            }
+        }, 100);
+        return false;
+    }
+
     const voterDataMap = new Map(voterDataMapEntries || []);
 
     // Apply search filter
@@ -4211,7 +4604,8 @@ function renderCachedPledgesData() {
     const searchTerm = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
     const filterValue = (filterSelect && filterSelect.value) ? filterSelect.value.trim() : '';
 
-    let filteredPledges = allPledges;
+    // Initialize filteredPledges - ensure it's always an array
+    let filteredPledges = Array.isArray(allPledges) ? allPledges : [];
 
     // Apply search filter
     if (searchTerm) {
@@ -4361,6 +4755,12 @@ function renderCachedPledgesData() {
 
 // Helper function to update pledge statistics from array
 function updatePledgeStatisticsFromArray(pledges) {
+    // Safety check: ensure pledges is an array
+    if (!pledges || !Array.isArray(pledges)) {
+        console.warn('[updatePledgeStatisticsFromArray] Invalid pledges array:', pledges);
+        pledges = [];
+    }
+
     let yes = 0,
         no = 0,
         undecided = 0,
@@ -4414,8 +4814,14 @@ async function loadAgentsData(forceRefresh = false) {
     // Check cache first
     if (!forceRefresh && isCacheValid('agents')) {
         console.log('[loadAgentsData] Using cached data - instant load');
-        renderCachedAgentsData();
-        return;
+        const rendered = renderCachedAgentsData();
+        if (rendered) {
+            return; // Successfully rendered from cache
+        } else {
+            console.log('[loadAgentsData] Cache render failed, loading from Firebase...');
+            // Clear invalid cache and continue to load from Firebase
+            clearCache('agents');
+        }
     }
 
     // Show skeleton loading
@@ -5823,6 +6229,7 @@ function populateSettingsData() {
                 updateMobileBottomNavVisibility();
             });
         }
+
     }, 100);
     // Get campaign data from global window object (set by app.js)
     if (window.campaignData) {
@@ -5852,6 +6259,7 @@ function populateSettingsData() {
 
     // Setup Zero Day toggle event listener
     setTimeout(() => {
+
         const zeroDayToggle = document.getElementById('zero-day-toggle');
         if (zeroDayToggle) {
             zeroDayToggle.addEventListener('change', async (e) => {
@@ -6732,6 +7140,9 @@ window.markVoterAsVoted = async (voterId) => {
             window.showSuccess('Voter marked as voted successfully!', 'Success');
         }
 
+        // Clear ballot statistics cache since voter status changed
+        clearBallotStatsCache();
+
         // Update the voter in stored data
         if (window.officerVotersData) {
             const voterIndex = window.officerVotersData.findIndex(v => v.id === voterId);
@@ -7096,6 +7507,7 @@ window.viewBallotVoters = async (ballotId, ballotNumber) => {
 
 // Switch ballot tab
 window.switchBallotTab = function(tab) {
+    console.log('[switchBallotTab] Switching to tab:', tab);
     // Update tab buttons
     document.querySelectorAll('.ballot-tab-btn').forEach(btn => {
         btn.classList.remove('active');
@@ -7109,13 +7521,26 @@ window.switchBallotTab = function(tab) {
     const statsTab = document.getElementById('ballot-statistics-tab');
 
     if (tab === 'list') {
-        if (listTab) listTab.classList.add('active');
-        if (statsTab) statsTab.classList.remove('active');
+        if (listTab) {
+            listTab.classList.add('active');
+            listTab.style.display = 'block';
+        }
+        if (statsTab) {
+            statsTab.classList.remove('active');
+            statsTab.style.display = 'none';
+        }
     } else if (tab === 'statistics') {
-        if (listTab) listTab.classList.remove('active');
-        if (statsTab) statsTab.classList.add('active');
-        // Load statistics for all ballots
-        loadAllBallotsStatistics();
+        if (listTab) {
+            listTab.classList.remove('active');
+            listTab.style.display = 'none';
+        }
+        if (statsTab) {
+            statsTab.classList.add('active');
+            statsTab.style.display = 'block';
+            console.log('[switchBallotTab] Loading statistics for all ballots...');
+            // Load statistics for all ballots (will use cache if available)
+            loadAllBallotsStatistics(false);
+        }
     }
 };
 
@@ -7185,10 +7610,44 @@ async function loadBallotStatistics(ballotId, ballotNumber) {
     }
 }
 
+// Initialize ballot statistics cache
+if (!window.ballotStatsCache) {
+    window.ballotStatsCache = {
+        data: null,
+        lastFetch: null,
+        cacheDuration: 60000, // 1 minute cache
+        userEmail: null
+    };
+}
+
+// Clear ballot statistics cache (call when voters are marked as voted or ballots are updated)
+function clearBallotStatsCache() {
+    if (window.ballotStatsCache) {
+        window.ballotStatsCache.data = null;
+        window.ballotStatsCache.lastFetch = null;
+        console.log('[clearBallotStatsCache] Ballot statistics cache cleared');
+    }
+}
+
+// Make function globally available
+window.clearBallotStatsCache = clearBallotStatsCache;
+
 // Load statistics for all ballots
-async function loadAllBallotsStatistics() {
+async function loadAllBallotsStatistics(forceRefresh = false) {
     const statsContent = document.getElementById('ballot-statistics-content');
     if (!statsContent) return;
+
+    // Check cache first (unless forced refresh)
+    const now = Date.now();
+    if (!forceRefresh &&
+        window.ballotStatsCache.data &&
+        window.ballotStatsCache.lastFetch &&
+        window.ballotStatsCache.userEmail === window.userEmail &&
+        (now - window.ballotStatsCache.lastFetch) < window.ballotStatsCache.cacheDuration) {
+        console.log('[loadAllBallotsStatistics] Using cached statistics');
+        renderAllBallotsStatistics(window.ballotStatsCache.data);
+        return;
+    }
 
     statsContent.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);"><p>Loading statistics...</p></div>';
 
@@ -7206,35 +7665,105 @@ async function loadAllBallotsStatistics() {
             getDocs
         } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        // Get all ballots
-        const ballotsQuery = query(
-            collection(window.db, 'ballots'),
-            where('email', '==', window.userEmail),
-            orderBy('ballotNumber', 'asc')
-        );
+        // Get all ballots - try both email and campaignEmail fields
+        let ballots = [];
+        let ballotsSnapshot;
 
-        const ballotsSnapshot = await getDocs(ballotsQuery);
-        const ballots = [];
-
-        ballotsSnapshot.docs.forEach(doc => {
-            ballots.push({
-                id: doc.id,
-                ...doc.data()
+        // Try querying by 'email' field first
+        try {
+            const ballotsQuery = query(
+                collection(window.db, 'ballots'),
+                where('email', '==', window.userEmail),
+                orderBy('ballotNumber', 'asc')
+            );
+            ballotsSnapshot = await getDocs(ballotsQuery);
+            ballotsSnapshot.docs.forEach(doc => {
+                const ballotData = doc.data();
+                if (ballotData.email === window.userEmail || ballotData.campaignEmail === window.userEmail) {
+                    ballots.push({
+                        id: doc.id,
+                        ...ballotData
+                    });
+                }
             });
-        });
+            console.log(`[loadAllBallotsStatistics] Query by 'email' returned ${ballots.length} ballots`);
+        } catch (emailError) {
+            console.warn('[loadAllBallotsStatistics] Query by email failed:', emailError);
+        }
+
+        // If no results, try querying by 'campaignEmail' field
+        if (ballots.length === 0) {
+            try {
+                const campaignBallotsQuery = query(
+                    collection(window.db, 'ballots'),
+                    where('campaignEmail', '==', window.userEmail),
+                    orderBy('ballotNumber', 'asc')
+                );
+                ballotsSnapshot = await getDocs(campaignBallotsQuery);
+                ballotsSnapshot.docs.forEach(doc => {
+                    const ballotData = doc.data();
+                    if (ballotData.email === window.userEmail || ballotData.campaignEmail === window.userEmail) {
+                        ballots.push({
+                            id: doc.id,
+                            ...ballotData
+                        });
+                    }
+                });
+                console.log(`[loadAllBallotsStatistics] Query by 'campaignEmail' returned ${ballots.length} ballots`);
+            } catch (campaignError) {
+                console.warn('[loadAllBallotsStatistics] Query by campaignEmail failed:', campaignError);
+            }
+        }
+
+        // If still no results, try without orderBy (in case orderBy field doesn't exist)
+        if (ballots.length === 0) {
+            try {
+                const simpleQuery = query(
+                    collection(window.db, 'ballots'),
+                    where('email', '==', window.userEmail)
+                );
+                ballotsSnapshot = await getDocs(simpleQuery);
+                ballotsSnapshot.docs.forEach(doc => {
+                    const ballotData = doc.data();
+                    if (ballotData.email === window.userEmail || ballotData.campaignEmail === window.userEmail) {
+                        ballots.push({
+                            id: doc.id,
+                            ...ballotData
+                        });
+                    }
+                });
+                // Sort client-side
+                ballots.sort((a, b) => {
+                    const aNum = a.ballotNumber || '';
+                    const bNum = b.ballotNumber || '';
+                    return aNum.localeCompare(bNum, undefined, {
+                        numeric: true,
+                        sensitivity: 'base'
+                    });
+                });
+                console.log(`[loadAllBallotsStatistics] Query without orderBy returned ${ballots.length} ballots`);
+            } catch (simpleError) {
+                console.warn('[loadAllBallotsStatistics] Simple query failed:', simpleError);
+            }
+        }
 
         if (ballots.length === 0) {
+            console.log('[loadAllBallotsStatistics] No ballots found for user:', window.userEmail);
             statsContent.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: var(--text-light);">
                     <p>No ballots found. Add ballots to view statistics.</p>
+                    <p style="font-size: 12px; margin-top: 8px; color: var(--text-light);">User email: ${window.userEmail || 'Not set'}</p>
                 </div>
             `;
             return;
         }
 
+        console.log(`[loadAllBallotsStatistics] Found ${ballots.length} ballots, calculating statistics...`);
+
         // Load statistics for each ballot
         const allStats = [];
         for (const ballot of ballots) {
+            console.log(`[loadAllBallotsStatistics] Calculating stats for ballot ${ballot.ballotNumber || ballot.id}...`);
             const stats = await calculateBallotStatistics(ballot.id, ballot.ballotNumber || 'N/A');
             if (stats) {
                 allStats.push({
@@ -7243,14 +7772,39 @@ async function loadAllBallotsStatistics() {
                     location: ballot.location || 'N/A',
                     ...stats
                 });
+                console.log(`[loadAllBallotsStatistics] Stats for ballot ${ballot.ballotNumber}:`, stats);
+            } else {
+                console.warn(`[loadAllBallotsStatistics] Failed to calculate stats for ballot ${ballot.ballotNumber || ballot.id}`);
             }
         }
 
+        console.log(`[loadAllBallotsStatistics] Total stats calculated: ${allStats.length}`);
+
+        // Cache the statistics
+        window.ballotStatsCache.data = allStats;
+        window.ballotStatsCache.lastFetch = Date.now();
+        window.ballotStatsCache.userEmail = window.userEmail;
+        console.log('[loadAllBallotsStatistics] Statistics cached');
+
         // Render all statistics
-        renderAllBallotsStatistics(allStats);
+        if (allStats.length > 0) {
+            renderAllBallotsStatistics(allStats);
+        } else {
+            statsContent.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--warning-color);">
+                    <p>No statistics available. No voters found for the selected ballots.</p>
+                </div>
+            `;
+        }
     } catch (error) {
         console.error('Error loading all ballots statistics:', error);
-        statsContent.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--danger-color);"><p>Error loading statistics. Please try again.</p></div>';
+        // Try to use cached data if available
+        if (window.ballotStatsCache.data && window.ballotStatsCache.data.length > 0) {
+            console.log('[loadAllBallotsStatistics] Using cached data due to error');
+            renderAllBallotsStatistics(window.ballotStatsCache.data);
+        } else {
+            statsContent.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--danger-color);"><p>Error loading statistics. Please try again.</p></div>';
+        }
     }
 }
 
@@ -7267,28 +7821,143 @@ async function calculateBallotStatistics(ballotId, ballotNumber) {
         } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
         // Fetch voters assigned to this ballot
-        const votersQuery = query(
-            collection(window.db, 'voters'),
-            where('email', '==', window.userEmail),
-            where('ballot', '==', ballotNumber)
-        );
+        // Try querying by 'email' field first with 'ballot' field
+        let votersSnapshot;
+        let voters = [];
 
-        const votersSnapshot = await getDocs(votersQuery);
-        const voters = [];
-
-        votersSnapshot.docs.forEach(doc => {
-            const voterData = doc.data();
-            voters.push({
-                id: doc.id,
-                name: voterData.name || 'N/A',
-                idNumber: voterData.idNumber || voterData.voterId || 'N/A',
-                permanentAddress: voterData.permanentAddress || voterData.address || 'N/A',
-                agentName: voterData.agentName || 'N/A',
-                voted: voterData.voted || false,
-                votedAt: voterData.votedAt || null,
-                pledge: voterData.pledge || null
+        try {
+            const votersQuery = query(
+                collection(window.db, 'voters'),
+                where('email', '==', window.userEmail),
+                where('ballot', '==', ballotNumber)
+            );
+            votersSnapshot = await getDocs(votersQuery);
+            votersSnapshot.docs.forEach(doc => {
+                const voterData = doc.data();
+                if (voterData.email === window.userEmail || voterData.campaignEmail === window.userEmail) {
+                    voters.push({
+                        id: doc.id,
+                        name: voterData.name || 'N/A',
+                        idNumber: voterData.idNumber || voterData.voterId || 'N/A',
+                        permanentAddress: voterData.permanentAddress || voterData.address || 'N/A',
+                        agentName: voterData.agentName || 'N/A',
+                        voted: voterData.voted || false,
+                        votedAt: voterData.votedAt || null,
+                        pledge: voterData.pledge || null
+                    });
+                }
             });
-        });
+            console.log(`[calculateBallotStatistics] Query by 'email' + 'ballot' returned ${voters.length} voters`);
+        } catch (emailError) {
+            console.warn('[calculateBallotStatistics] Query by email + ballot failed:', emailError);
+        }
+
+        // If no results, try querying by 'campaignEmail' field
+        if (voters.length === 0) {
+            try {
+                const campaignVotersQuery = query(
+                    collection(window.db, 'voters'),
+                    where('campaignEmail', '==', window.userEmail),
+                    where('ballot', '==', ballotNumber)
+                );
+                const campaignSnapshot = await getDocs(campaignVotersQuery);
+                campaignSnapshot.docs.forEach(doc => {
+                    const voterData = doc.data();
+                    if (voterData.email === window.userEmail || voterData.campaignEmail === window.userEmail) {
+                        voters.push({
+                            id: doc.id,
+                            name: voterData.name || 'N/A',
+                            idNumber: voterData.idNumber || voterData.voterId || 'N/A',
+                            permanentAddress: voterData.permanentAddress || voterData.address || 'N/A',
+                            agentName: voterData.agentName || 'N/A',
+                            voted: voterData.voted || false,
+                            votedAt: voterData.votedAt || null,
+                            pledge: voterData.pledge || null
+                        });
+                    }
+                });
+                console.log(`[calculateBallotStatistics] Query by 'campaignEmail' + 'ballot' returned ${voters.length} voters`);
+            } catch (campaignError) {
+                console.warn('[calculateBallotStatistics] Query by campaignEmail + ballot failed:', campaignError);
+            }
+        }
+
+        // If still no results, try querying by 'ballotBox' field instead of 'ballot'
+        if (voters.length === 0) {
+            try {
+                const ballotBoxQuery = query(
+                    collection(window.db, 'voters'),
+                    where('email', '==', window.userEmail),
+                    where('ballotBox', '==', ballotNumber)
+                );
+                const ballotBoxSnapshot = await getDocs(ballotBoxQuery);
+                ballotBoxSnapshot.docs.forEach(doc => {
+                    const voterData = doc.data();
+                    if (voterData.email === window.userEmail || voterData.campaignEmail === window.userEmail) {
+                        voters.push({
+                            id: doc.id,
+                            name: voterData.name || 'N/A',
+                            idNumber: voterData.idNumber || voterData.voterId || 'N/A',
+                            permanentAddress: voterData.permanentAddress || voterData.address || 'N/A',
+                            agentName: voterData.agentName || 'N/A',
+                            voted: voterData.voted || false,
+                            votedAt: voterData.votedAt || null,
+                            pledge: voterData.pledge || null
+                        });
+                    }
+                });
+                console.log(`[calculateBallotStatistics] Query by 'email' + 'ballotBox' returned ${voters.length} voters`);
+            } catch (ballotBoxError) {
+                console.warn('[calculateBallotStatistics] Query by email + ballotBox failed:', ballotBoxError);
+            }
+        }
+
+        // Fallback: Load all voters and filter client-side
+        if (voters.length === 0) {
+            console.log('[calculateBallotStatistics] No results from queries, trying fallback: loading all voters and filtering client-side');
+            try {
+                // Query by email first
+                let allVotersQuery = query(
+                    collection(window.db, 'voters'),
+                    where('email', '==', window.userEmail)
+                );
+                let allSnapshot = await getDocs(allVotersQuery);
+
+                // If no results, try campaignEmail
+                if (allSnapshot.docs.length === 0) {
+                    allVotersQuery = query(
+                        collection(window.db, 'voters'),
+                        where('campaignEmail', '==', window.userEmail)
+                    );
+                    allSnapshot = await getDocs(allVotersQuery);
+                }
+
+                // Filter client-side by ballot number (check both 'ballot' and 'ballotBox' fields)
+                allSnapshot.docs.forEach(doc => {
+                    const voterData = doc.data();
+                    const matchesEmail = voterData.email === window.userEmail || voterData.campaignEmail === window.userEmail;
+                    const matchesBallot = voterData.ballot === ballotNumber ||
+                        voterData.ballotBox === ballotNumber ||
+                        voterData.ballotNumber === ballotNumber;
+
+                    if (matchesEmail && matchesBallot) {
+                        voters.push({
+                            id: doc.id,
+                            name: voterData.name || 'N/A',
+                            idNumber: voterData.idNumber || voterData.voterId || 'N/A',
+                            permanentAddress: voterData.permanentAddress || voterData.address || 'N/A',
+                            agentName: voterData.agentName || 'N/A',
+                            voted: voterData.voted || false,
+                            votedAt: voterData.votedAt || null,
+                            pledge: voterData.pledge || null
+                        });
+                    }
+                });
+                console.log(`[calculateBallotStatistics] After client-side filtering: ${voters.length} voters match`);
+            } catch (fallbackError) {
+                console.error('[calculateBallotStatistics] Fallback query failed:', fallbackError);
+            }
+        }
 
         // Calculate statistics
         const totalVoters = voters.length;
@@ -7936,10 +8605,17 @@ function createModalOverlay() {
         overlay.id = 'modal-overlay';
         overlay.className = 'modal-overlay';
         overlay.innerHTML = `
-            <div class="modal-container">
+            <div class="modal-container" id="modal-container">
                 <div class="modal-header">
                     <h2 id="modal-title">Modal Title</h2>
-                    <button class="modal-close" onclick="closeModal()">&times;</button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="modal-maximize" id="modal-maximize-btn" title="Maximize" onclick="if (typeof toggleModalMaximize === 'function') { const container = this.closest('.modal-container'); toggleModalMaximize(container, this); }">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                            </svg>
+                        </button>
+                        <button class="modal-close" onclick="closeModal()">&times;</button>
+                    </div>
                 </div>
                 <div id="modal-body" class="modal-body"></div>
             </div>
@@ -8393,14 +9069,37 @@ window.notificationsLoading = false; // Flag to prevent multiple simultaneous lo
 
 // Load notifications from Firebase
 async function loadNotifications() {
-    if (!window.db || !window.userEmail) {
+    console.log('[Notifications] loadNotifications called', {
+        hasDb: !!window.db,
+        userEmail: window.userEmail,
+        authUser: window.auth.currentUser.email
+    });
+
+    if (!window.db) {
+        console.warn('[Notifications] Database not initialized');
         const notificationList = document.getElementById('notification-list');
         if (notificationList) {
-            notificationList.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.7);"><p>No notifications available</p></div>';
+            notificationList.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.7);"><p>Database not initialized</p></div>';
         }
-        // Hide badge if no user
         updateNotificationBadge(0);
         return;
+    }
+
+    if (!window.userEmail) {
+        console.warn('[Notifications] userEmail not set, trying to get from auth');
+        // Try to get email from auth
+        if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
+            window.userEmail = window.auth.currentUser.email;
+            console.log('[Notifications] Using email from auth:', window.userEmail);
+        } else {
+            console.warn('[Notifications] Cannot load notifications - no userEmail available');
+            const notificationList = document.getElementById('notification-list');
+            if (notificationList) {
+                notificationList.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.7);"><p>Please log in to view notifications</p></div>';
+            }
+            updateNotificationBadge(0);
+            return;
+        }
     }
 
     const notificationList = document.getElementById('notification-list');
@@ -8797,6 +9496,32 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
         // Create modal HTML
         const modalHTML = `
             <div class="voter-details-modal" style="max-width: 600px; margin: 0 auto;">
+                <!-- Actions at top -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button 
+                            class="btn-primary btn-compact" 
+                            onclick="editVoter('${voterId}')"
+                            style="white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            onclick="deleteVoter('${voterId}')"
+                            style="display: flex; align-items: center; gap: 6px; background: var(--danger-color); color: white; border-color: var(--danger-color); white-space: nowrap;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     ${imageUrl ? 
                         `<img src="${imageUrl}" alt="${data.name || 'Voter'}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);">` :
@@ -8865,9 +9590,8 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
                     </div>
                 </div>
 
-                <!-- Navigation and Actions -->
-                <div style="display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                    <!-- Navigation -->
+                <!-- Navigation at bottom -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
                         <button 
                             id="voter-nav-prev" 
@@ -8895,31 +9619,6 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
                             </svg>
                         </button>
                     </div>
-
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                        <button 
-                            class="btn-primary btn-compact" 
-                            onclick="editVoter('${voterId}')"
-                            style="white-space: nowrap;"
-                            style="display: flex; align-items: center; gap: 6px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            Edit
-                        </button>
-                        <button 
-                            class="btn-secondary btn-compact" 
-                            onclick="deleteVoter('${voterId}')"
-                            style="display: flex; align-items: center; gap: 6px; background: var(--danger-color); color: white; border-color: var(--danger-color); white-space: nowrap;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            Delete
-                        </button>
-                    </div>
                 </div>
             </div>
         `;
@@ -8934,15 +9633,22 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
                 overlay.id = 'modal-overlay';
                 overlay.className = 'modal-overlay';
                 overlay.innerHTML = `
-                    <div class="modal-container" style="max-width: 700px;">
+                    <div class="modal-container" id="modal-container" style="max-width: 700px;">
                         <div class="modal-header">
                             <h2 id="modal-title">Voter Details</h2>
-                            <button class="modal-close" id="modal-close-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="modal-maximize" id="modal-maximize-btn" title="Maximize" onclick="if (typeof toggleModalMaximize === 'function') { const container = this.closest('.modal-container'); toggleModalMaximize(container, this); }">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                    </svg>
+                                </button>
+                                <button class="modal-close" id="modal-close-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="modal-body" id="modal-body"></div>
                     </div>
@@ -9498,6 +10204,32 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
         // Create modal HTML
         const modalHTML = `
             <div class="pledge-details-modal" style="max-width: 600px; margin: 0 auto;">
+                <!-- Actions at top -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button 
+                            class="btn-primary btn-compact" 
+                            onclick="editPledge('${pledgeId}')"
+                            style="white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            onclick="deletePledge('${pledgeId}')"
+                            style="display: flex; align-items: center; gap: 6px; background: var(--danger-color); color: white; border-color: var(--danger-color); white-space: nowrap;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     ${imageUrl ? 
                         `<img src="${imageUrl}" alt="${voterName}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);">` :
@@ -9588,9 +10320,8 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
                     </div>
                 ` : ''}
 
-                <!-- Navigation and Actions -->
-                <div style="display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                    <!-- Navigation -->
+                <!-- Navigation at bottom -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
                         <button 
                             id="pledge-nav-prev" 
@@ -9618,31 +10349,6 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
                             </svg>
                         </button>
                     </div>
-
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                        <button 
-                            class="btn-primary btn-compact" 
-                            onclick="editPledge('${pledgeId}')"
-                            style="white-space: nowrap;"
-                            style="display: flex; align-items: center; gap: 6px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            Edit
-                        </button>
-                        <button 
-                            class="btn-secondary btn-compact" 
-                            onclick="deletePledge('${pledgeId}')"
-                            style="display: flex; align-items: center; gap: 6px; background: var(--danger-color); color: white; border-color: var(--danger-color); white-space: nowrap;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            Delete
-                        </button>
-                    </div>
                 </div>
             </div>
         `;
@@ -9655,15 +10361,22 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
                 overlay.id = 'modal-overlay';
                 overlay.className = 'modal-overlay';
                 overlay.innerHTML = `
-                    <div class="modal-container" style="max-width: 700px;">
+                    <div class="modal-container" id="modal-container" style="max-width: 700px;">
                         <div class="modal-header">
                             <h2 id="modal-title">Pledge Details</h2>
-                            <button class="modal-close" id="modal-close-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="modal-maximize" id="modal-maximize-btn" title="Maximize" onclick="if (typeof toggleModalMaximize === 'function') { const container = this.closest('.modal-container'); toggleModalMaximize(container, this); }">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                    </svg>
+                                </button>
+                                <button class="modal-close" id="modal-close-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="modal-body" id="modal-body"></div>
                     </div>
@@ -10042,6 +10755,32 @@ async function viewCandidateDetails(candidateId, navigateDirection = null) {
         // Create modal HTML
         const modalHTML = `
             <div class="candidate-details-modal" style="max-width: 600px; margin: 0 auto;">
+                <!-- Actions at top -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button 
+                            class="btn-primary btn-compact" 
+                            onclick="editCandidate('${candidateId}')"
+                            style="white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit
+                        </button>
+                        <button 
+                            class="btn-secondary btn-compact" 
+                            onclick="deleteCandidate('${candidateId}')"
+                            style="display: flex; align-items: center; gap: 6px; background: var(--danger-color); color: white; border-color: var(--danger-color); white-space: nowrap;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     <div style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>
                     <div>
@@ -10077,10 +10816,9 @@ async function viewCandidateDetails(candidateId, navigateDirection = null) {
                     </div>
                 </div>
 
-                <!-- Navigation and Actions -->
-                <div style="display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                    <!-- Navigation -->
-                    ${allCandidates.length > 1 ? `
+                <!-- Navigation at bottom -->
+                ${allCandidates.length > 1 ? `
+                <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
                         <button 
                             class="btn-secondary btn-compact" 
@@ -10106,32 +10844,8 @@ async function viewCandidateDetails(candidateId, navigateDirection = null) {
                             </svg>
                         </button>
                     </div>
-                    ` : '<div></div>'}
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                        <button 
-                            class="btn-primary btn-compact" 
-                            onclick="editCandidate('${candidateId}')"
-                            style="white-space: nowrap;"
-                            style="display: flex; align-items: center; gap: 6px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            Edit
-                        </button>
-                        <button 
-                            class="btn-secondary btn-compact" 
-                            onclick="deleteCandidate('${candidateId}')"
-                            style="display: flex; align-items: center; gap: 6px; background: var(--danger-color); color: white; border-color: var(--danger-color); white-space: nowrap;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            Delete
-                        </button>
-                    </div>
                 </div>
+                ` : ''}
             </div>
         `;
 
@@ -10143,15 +10857,22 @@ async function viewCandidateDetails(candidateId, navigateDirection = null) {
                 overlay.id = 'modal-overlay';
                 overlay.className = 'modal-overlay';
                 overlay.innerHTML = `
-                    <div class="modal-container" style="max-width: 700px;">
+                    <div class="modal-container" id="modal-container" style="max-width: 700px;">
                         <div class="modal-header">
                             <h2 id="modal-title">Candidate Details</h2>
-                            <button class="modal-close" id="modal-close-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="modal-maximize" id="modal-maximize-btn" title="Maximize" onclick="if (typeof toggleModalMaximize === 'function') { const container = this.closest('.modal-container'); toggleModalMaximize(container, this); }">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                    </svg>
+                                </button>
+                                <button class="modal-close" id="modal-close-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="modal-body" id="modal-body"></div>
                     </div>
@@ -11003,6 +11724,14 @@ async function viewAgentDetails(agentId, navigateDirection = null) {
 
         modalBody.innerHTML = `
             <div style="max-width: 700px; margin: 0 auto;">
+                <!-- Actions at top -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button class="btn-secondary" onclick="closeModal();" style="white-space: nowrap; padding: 16px 28px; height: auto; min-height: 48px; display: inline-flex; align-items: center; justify-content: center;">Close</button>
+                        <button class="btn-primary" onclick="closeModal(); viewAgentPerformance('${agentId}');" style="white-space: nowrap;">View Performance</button>
+                    </div>
+                </div>
+
                 <!-- Agent Information -->
                 <div style="background: var(--light-color); padding: 24px; border-radius: 12px; margin-bottom: 24px;">
                     <h3 style="font-size: 18px; font-weight: 600; color: var(--text-color); margin-bottom: 20px; font-family: 'Poppins', sans-serif;">Agent Information</h3>
@@ -11048,14 +11777,6 @@ async function viewAgentDetails(agentId, navigateDirection = null) {
 
                 <!-- Quick Actions -->
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-                    <button class="icon-btn" onclick="closeModal(); assignVotersToAgent('${agentId}');" title="Assign Voters" style="width: 48px; height: 48px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="8.5" cy="7" r="4"></circle>
-                            <line x1="20" y1="8" x2="20" y2="14"></line>
-                            <line x1="23" y1="11" x2="17" y2="11"></line>
-                        </svg>
-                    </button>
                     <button class="icon-btn" onclick="closeModal(); generateAgentLink('${agentId}');" title="Generate Link" style="width: 48px; height: 48px; background: var(--gradient-primary); color: white;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
@@ -11080,7 +11801,7 @@ async function viewAgentDetails(agentId, navigateDirection = null) {
 
         if (modalFooter) {
             modalFooter.innerHTML = `
-                <div style="display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 8px; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <!-- Navigation -->
                     ${allAgents.length > 1 ? `
                     <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
@@ -11109,11 +11830,6 @@ async function viewAgentDetails(agentId, navigateDirection = null) {
                         </button>
                     </div>
                     ` : '<div></div>'}
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                        <button class="btn-secondary" onclick="closeModal();" style="white-space: nowrap;">Close</button>
-                        <button class="btn-primary" onclick="closeModal(); viewAgentPerformance('${agentId}');" style="white-space: nowrap;">View Performance</button>
-                    </div>
                 </div>
             `;
         }
@@ -11338,15 +12054,22 @@ function ensureModalExists() {
         modalOverlay.id = 'modal-overlay';
         modalOverlay.className = 'modal-overlay';
         modalOverlay.innerHTML = `
-            <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-container" id="modal-container" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 id="modal-title">Modal</h2>
-                    <button class="modal-close" onclick="closeModal()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="modal-maximize" id="modal-maximize-btn" title="Maximize" onclick="if (typeof toggleModalMaximize === 'function') { const container = this.closest('.modal-container'); toggleModalMaximize(container, this); }">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                            </svg>
+                        </button>
+                        <button class="modal-close" onclick="closeModal()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-body" id="modal-body"></div>
             </div>
@@ -11555,6 +12278,21 @@ async function viewCallDetails(callId, navigateDirection = null) {
 
         const modalContent = `
             <div style="padding: 1.5rem;">
+                <!-- Actions at top -->
+                <div style="display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
+                        <button class="btn-secondary btn-compact" onclick="closeModal()" style="white-space: nowrap;">Close</button>
+                        <button class="btn-primary btn-compact" onclick="closeModal(); setTimeout(() => { if (window.openModal) window.openModal('call', '${callId}'); }, 100);" style="white-space: nowrap;">Edit Call</button>
+                        <button class="btn-danger btn-compact" onclick="window.deleteCall('${callId}')" style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Delete Call
+                        </button>
+                    </div>
+                </div>
+
                 <div style="display: grid; gap: 1.5rem;">
                     <div style="background: var(--light-color); padding: 1.25rem; border-radius: 12px;">
                         <div style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Voter Information</div>
@@ -11588,9 +12326,9 @@ async function viewCallDetails(callId, navigateDirection = null) {
                     </div>
                     ` : ''}
 
-                    <div style="display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                        <!-- Navigation -->
-                        ${allCalls.length > 1 ? `
+                    <!-- Navigation at bottom -->
+                    ${allCalls.length > 1 ? `
+                    <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
                         <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
                             <button 
                                 class="btn-secondary btn-compact" 
@@ -11616,20 +12354,8 @@ async function viewCallDetails(callId, navigateDirection = null) {
                                 </svg>
                             </button>
                         </div>
-                        ` : '<div></div>'}
-                        <!-- Actions -->
-                        <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                            <button class="btn-secondary btn-compact" onclick="closeModal()" style="white-space: nowrap;">Close</button>
-                            <button class="btn-primary btn-compact" onclick="closeModal(); setTimeout(() => { if (window.openModal) window.openModal('call', '${callId}'); }, 100);" style="white-space: nowrap;">Edit Call</button>
-                            <button class="btn-danger btn-compact" onclick="window.deleteCall('${callId}')" style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                                Delete Call
-                            </button>
-                        </div>
                     </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -11875,6 +12601,21 @@ window.loadNotifications = loadNotifications;
 window.reloadTableData = reloadTableData;
 window.deleteNotification = deleteNotification;
 window.clearAllNotifications = clearAllNotifications;
+
+// Setup clear all notifications button handler (if not already set up in app.js)
+document.addEventListener('DOMContentLoaded', function() {
+    const clearAllBtn = document.getElementById('clear-all-notifications');
+    if (clearAllBtn && !clearAllBtn.dataset.handlerAttached) {
+        clearAllBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (typeof clearAllNotifications === 'function') {
+                await clearAllNotifications();
+            }
+        });
+        clearAllBtn.dataset.handlerAttached = 'true';
+        console.log('[Notification Center] Clear all button handler attached');
+    }
+});
 // Change agent access code (from within the Agent Access Link modal)
 async function changeAgentAccessCodeInModal(agentId, currentCode) {
     if (!window.db || !window.userEmail) return;
@@ -12019,10 +12760,10 @@ async function showAgentSelectionForVoterAssignment() {
 
         if (!modalBody || !modalTitle) return;
 
-        // Update modal container to be wider for two-panel layout
+        // Update modal container to be wider for three-panel layout
         const modalContainer = modalOverlay.querySelector('.modal-container');
         if (modalContainer) {
-            modalContainer.style.maxWidth = '1200px';
+            modalContainer.style.maxWidth = '1400px';
             modalContainer.style.width = '95%';
         }
 
@@ -12059,14 +12800,14 @@ async function showAgentSelectionForVoterAssignment() {
             });
         });
 
-        // Create two-panel layout
+        // Create three-panel layout
         let html = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 600px;">
+            <div class="assign-voters-layout" style="display: flex; gap: 16px; height: 600px; min-height: 500px;">
                 <!-- Left Panel: Agents List -->
-                <div style="display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+                <div class="assign-panel-left" style="flex: 0 0 250px; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white;">
                     <div style="background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);">
                         <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Agents</h3>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);">Select an agent to assign voters</p>
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);">Select an agent</p>
                     </div>
                     <div id="agents-list-container" style="flex: 1; overflow-y: auto; padding: 12px;">
         `;
@@ -12091,10 +12832,10 @@ async function showAgentSelectionForVoterAssignment() {
                     </div>
                 </div>
 
-                <!-- Right Panel: Voters List -->
-                <div style="display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+                <!-- Center Panel: Voters List -->
+                <div class="assign-panel-center" style="flex: 1; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white; min-width: 0;">
                     <div style="background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Voters Database</h3>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Voters</h3>
                         <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);" id="selected-agent-info">Select an agent first</p>
                     </div>
                     <div style="padding: 12px; border-bottom: 2px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
@@ -12108,13 +12849,6 @@ async function showAgentSelectionForVoterAssignment() {
                                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                                 </svg>
                                 Filters
-                            </button>
-                            <button id="tree-toggle-btn" class="btn-secondary btn-compact" onclick="toggleTreeView()" style="font-size: 12px; padding: 8px 12px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                    <circle cx="12" cy="10" r="3"></circle>
-                                </svg>
-                                Tree View
                             </button>
                         </div>
                         <div id="voter-filters-panel" style="display: none; padding: 10px; background: var(--light-color); border-radius: 8px; border: 1px solid var(--border-color);">
@@ -12175,11 +12909,27 @@ async function showAgentSelectionForVoterAssignment() {
                         </div>
                     </div>
                 </div>
+
+                <!-- Right Panel: Voter Details -->
+                <div class="assign-panel-right" style="flex: 0 0 320px; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white;">
+                    <div style="background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Voter Details</h3>
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);">Select a voter to view details</p>
+                    </div>
+                    <div id="voter-details-container" style="flex: 1; overflow-y: auto; padding: 16px;">
+                        <div style="text-align: center; padding: 40px; color: var(--text-light);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; opacity: 0.5;">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <p style="margin: 0;">Select a voter from the list to view full details</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="assignment-error" class="error-message" style="display: none; margin-top: 15px;"></div>
             <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
                 <button type="button" class="btn-secondary btn-compact" onclick="closeModal()">Close</button>
-                <button type="button" class="btn-primary btn-compact" id="save-assignment-btn" onclick="saveBulkVoterAssignment()" style="display: none;">Save Assignment</button>
             </div>
         `;
 
@@ -12295,14 +13045,22 @@ function selectAgentForAssignment(agentId) {
     window.assignmentData.currentPage = 1;
     window.assignmentData.cachedResults = null;
 
+    // Clear voter details panel
+    const detailsContainer = document.getElementById('voter-details-container');
+    if (detailsContainer) {
+        detailsContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: var(--text-light);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; opacity: 0.5;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <p style="margin: 0;">Select a voter from the list to view full details</p>
+            </div>
+        `;
+    }
+
     // Render voters list
     renderVotersForAssignment(agentId);
-
-    // Show save button
-    const saveBtn = document.getElementById('save-assignment-btn');
-    if (saveBtn) {
-        saveBtn.style.display = 'inline-flex';
-    }
 }
 
 // Render voters list for assignment with tree view and sorting
@@ -12399,12 +13157,8 @@ function renderVotersForAssignment(agentId) {
         updateFilterDropdowns(filteredVoters, filterIsland, filterAtoll);
     }
 
-    // Render based on tree view or list view
-    if (treeViewEnabled) {
-        renderTreeView(filteredVoters, agentId, votersContainer);
-    } else {
-        renderListView(filteredVoters, agentId, votersContainer);
-    }
+    // Always render list view (tree view removed for new design)
+    renderListView(filteredVoters, agentId, votersContainer);
 }
 
 // Render list view (flat list) with pagination
@@ -12439,94 +13193,118 @@ function renderListView(voters, agentId, container) {
                 otherAgentName = otherAgent ? otherAgent.name : 'Another Agent';
             }
 
-            const label = document.createElement('label');
-            label.style.cssText = `display: flex; align-items: center; padding: 12px; border: 2px solid ${isAssigned ? 'var(--primary-color)' : isAssignedOther ? 'var(--warning-color)' : 'var(--border-color)'}; border-radius: 8px; cursor: ${isAssignedOther ? 'not-allowed' : 'pointer'}; background: ${isAssigned ? 'var(--primary-50)' : isAssignedOther ? 'rgba(217, 119, 6, 0.05)' : 'white'}; transition: all 0.2s; opacity: ${isAssignedOther ? '0.7' : '1'};`;
-            label.setAttribute('data-voter-id', voter.id);
-            label.setAttribute('data-voter-name', (voter.name || '').toLowerCase());
-            label.setAttribute('data-voter-island', (voter.island || '').toLowerCase());
-            label.setAttribute('data-voter-address', (voter.permanentAddress || '').toLowerCase());
+            // Create voter card
+            const voterCard = document.createElement('div');
+            voterCard.className = 'voter-card-assign';
+            voterCard.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 14px; border: 2px solid ${isAssigned ? 'var(--primary-color)' : isAssignedOther ? 'var(--warning-color)' : 'var(--border-color)'}; border-radius: 8px; background: ${isAssigned ? 'var(--primary-50)' : isAssignedOther ? 'rgba(217, 119, 6, 0.05)' : 'white'}; transition: all 0.2s; cursor: pointer; opacity: ${isAssignedOther ? '0.7' : '1'};`;
+            voterCard.setAttribute('data-voter-id', voter.id);
+            voterCard.setAttribute('data-voter-name', (voter.name || '').toLowerCase());
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = isAssigned;
-            checkbox.disabled = isAssignedOther;
-            checkbox.setAttribute('data-voter-id', voter.id);
-            checkbox.style.cssText = `margin-right: 12px; width: 18px; height: 18px; cursor: ${isAssignedOther ? 'not-allowed' : 'pointer'};`;
-            if (isAssignedOther) {
-                checkbox.title = `This voter is already assigned to ${otherAgentName}`;
+            // Click to view details
+            voterCard.onclick = (e) => {
+                // Don't trigger if clicking the assign button
+                if (!e.target.closest('.assign-voter-btn')) {
+                    showVoterDetailsForAssignment(voter);
+                }
+            };
+
+            // Voter image section
+            const imageSection = document.createElement('div');
+            imageSection.style.cssText = 'flex-shrink: 0; margin-right: 12px;';
+
+            const imageUrl = voter.image || voter.imageUrl || voter.photo || voter.photoUrl || '';
+            const initials = voter.name ? voter.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
+
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = voter.name || 'Voter';
+                img.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--border-color);';
+                img.onerror = function() {
+                    // Fallback to initials if image fails to load
+                    this.style.display = 'none';
+                    const fallbackDiv = document.createElement('div');
+                    fallbackDiv.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-color);';
+                    fallbackDiv.textContent = initials;
+                    imageSection.appendChild(fallbackDiv);
+                };
+                imageSection.appendChild(img);
+            } else {
+                const initialsDiv = document.createElement('div');
+                initialsDiv.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-color);';
+                initialsDiv.textContent = initials;
+                imageSection.appendChild(initialsDiv);
             }
 
-            const contentDiv = document.createElement('div');
-            contentDiv.style.cssText = 'flex: 1;';
+            // Voter info section
+            const infoSection = document.createElement('div');
+            infoSection.style.cssText = 'flex: 1; min-width: 0;';
 
-            const nameStrong = document.createElement('strong');
-            nameStrong.style.cssText = 'display: block; color: var(--text-color); margin-bottom: 6px;';
-            nameStrong.textContent = voter.name;
-
-            const infoDiv = document.createElement('div');
-            infoDiv.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
+            const nameDiv = document.createElement('div');
+            nameDiv.style.cssText = 'font-weight: 600; font-size: 14px; color: var(--text-color); margin-bottom: 6px;';
+            nameDiv.textContent = voter.name || 'N/A';
 
             const detailsDiv = document.createElement('div');
-            detailsDiv.style.cssText = 'display: flex; gap: 12px; flex-wrap: wrap;';
+            detailsDiv.style.cssText = 'display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-light);';
 
-            const idSpan = document.createElement('span');
-            idSpan.style.cssText = 'font-size: 12px; color: var(--text-light);';
-            idSpan.innerHTML = `<strong>ID:</strong> ${voter.idNumber}`;
-            detailsDiv.appendChild(idSpan);
-
-            if (voter.island) {
-                const islandSpan = document.createElement('span');
-                islandSpan.style.cssText = 'font-size: 12px; color: var(--text-light);';
-                islandSpan.innerHTML = `<strong>Island:</strong> ${voter.island}`;
-                detailsDiv.appendChild(islandSpan);
-            }
+            const idDiv = document.createElement('div');
+            idDiv.innerHTML = `<strong>ID:</strong> ${voter.idNumber || 'N/A'}`;
+            detailsDiv.appendChild(idDiv);
 
             if (voter.permanentAddress && voter.permanentAddress !== 'Unknown') {
-                const addressSpan = document.createElement('span');
-                addressSpan.style.cssText = 'font-size: 12px; color: var(--text-light);';
-                addressSpan.innerHTML = `<strong>Address:</strong> ${voter.permanentAddress}`;
-                detailsDiv.appendChild(addressSpan);
+                const addressDiv = document.createElement('div');
+                addressDiv.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+                addressDiv.innerHTML = `<strong>Address:</strong> ${voter.permanentAddress}`;
+                detailsDiv.appendChild(addressDiv);
             }
-
-            infoDiv.appendChild(detailsDiv);
 
             if (isAssignedOther) {
-                const assignedSpan = document.createElement('span');
-                assignedSpan.style.cssText = 'font-size: 11px; color: var(--warning-color); font-weight: 600; margin-top: 4px;';
-                assignedSpan.textContent = `(Assigned to ${otherAgentName})`;
-                infoDiv.appendChild(assignedSpan);
+                const assignedDiv = document.createElement('div');
+                assignedDiv.style.cssText = 'font-size: 11px; color: var(--warning-color); font-weight: 600; margin-top: 4px;';
+                assignedDiv.textContent = `Assigned to ${otherAgentName}`;
+                detailsDiv.appendChild(assignedDiv);
+            } else if (isAssigned) {
+                const assignedDiv = document.createElement('div');
+                assignedDiv.style.cssText = 'font-size: 11px; color: var(--success-color); font-weight: 600; margin-top: 4px;';
+                assignedDiv.textContent = 'Currently assigned';
+                detailsDiv.appendChild(assignedDiv);
             }
+
+            infoSection.appendChild(nameDiv);
+            infoSection.appendChild(detailsDiv);
+
+            // Assign button
+            const buttonDiv = document.createElement('div');
+            buttonDiv.style.cssText = 'flex-shrink: 0; margin-left: 12px;';
+
+            const assignBtn = document.createElement('button');
+            assignBtn.className = 'assign-voter-btn';
+            assignBtn.style.cssText = `padding: 8px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: ${isAssignedOther ? 'not-allowed' : 'pointer'}; transition: all 0.2s; white-space: nowrap;`;
 
             if (isAssigned) {
-                const currentSpan = document.createElement('span');
-                currentSpan.style.cssText = 'font-size: 11px; color: var(--success-color); font-weight: 600; margin-top: 4px;';
-                currentSpan.textContent = '(Currently assigned)';
-                infoDiv.appendChild(currentSpan);
+                assignBtn.textContent = 'Unassign';
+                assignBtn.style.cssText += 'background: var(--danger-color); color: white;';
+            } else if (isAssignedOther) {
+                assignBtn.textContent = 'Assigned';
+                assignBtn.style.cssText += 'background: var(--light-color); color: var(--text-light);';
+                assignBtn.disabled = true;
+            } else {
+                assignBtn.textContent = 'Assign';
+                assignBtn.style.cssText += 'background: var(--primary-color); color: white;';
             }
 
-            contentDiv.appendChild(nameStrong);
-            contentDiv.appendChild(infoDiv);
-            label.appendChild(checkbox);
-            label.appendChild(contentDiv);
+            assignBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (!isAssignedOther) {
+                    toggleVoterAssignment(voter.id, agentId, !isAssigned);
+                }
+            };
 
-            // Add image on the right side if available
-            if (voter.image) {
-                const imageDiv = document.createElement('div');
-                imageDiv.style.cssText = 'margin-left: 12px; flex-shrink: 0;';
-
-                const img = document.createElement('img');
-                img.src = voter.image;
-                img.alt = voter.name;
-                img.style.cssText = 'width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border-color);';
-                img.onerror = function() {
-                    this.style.display = 'none';
-                };
-
-                imageDiv.appendChild(img);
-                label.appendChild(imageDiv);
-            }
-
-            wrapper.appendChild(label);
+            buttonDiv.appendChild(assignBtn);
+            voterCard.appendChild(imageSection);
+            voterCard.appendChild(infoSection);
+            voterCard.appendChild(buttonDiv);
+            wrapper.appendChild(voterCard);
         });
 
         // Add pagination controls if needed
@@ -13146,12 +13924,183 @@ window.viewAgentPerformance = viewAgentPerformance;
 window.showAgentSelectionForVoterAssignment = showAgentSelectionForVoterAssignment;
 window.selectAgentForAssignment = selectAgentForAssignment;
 window.renderVotersForAssignment = renderVotersForAssignment;
+// Show voter details in right panel
+function showVoterDetailsForAssignment(voter) {
+    if (!voter || !window.assignmentData) return;
+
+    const detailsContainer = document.getElementById('voter-details-container');
+    if (!detailsContainer) return;
+
+    // Find full voter data
+    const fullVoter = window.assignmentData.voters.find(v => v.id === voter.id);
+    if (!fullVoter) return;
+
+    // Update selected voter styling
+    document.querySelectorAll('.voter-card-assign').forEach(card => {
+        if (card.dataset.voterId === voter.id) {
+            card.style.borderColor = 'var(--primary-color)';
+            card.style.boxShadow = '0 0 0 3px rgba(111, 193, 218, 0.2)';
+        } else {
+            card.style.borderColor = '';
+            card.style.boxShadow = '';
+        }
+    });
+
+    // Build details HTML
+    let html = `
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            ${fullVoter.image ? `
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <img src="${fullVoter.image}" alt="${fullVoter.name}" 
+                         style="width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 3px solid var(--border-color);"
+                         onerror="this.style.display='none'">
+                </div>
+            ` : ''}
+            <div style="border-bottom: 2px solid var(--border-color); padding-bottom: 12px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: var(--text-color);">${fullVoter.name || 'N/A'}</h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-light);">ID: ${fullVoter.idNumber || 'N/A'}</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+    `;
+
+    const fields = [{
+            label: 'Permanent Address',
+            value: fullVoter.permanentAddress
+        },
+        {
+            label: 'Island',
+            value: fullVoter.island
+        },
+        {
+            label: 'Atoll',
+            value: fullVoter.atoll
+        },
+        {
+            label: 'Constituency',
+            value: fullVoter.constituency
+        },
+        {
+            label: 'Ballot Box',
+            value: fullVoter.ballotBox
+        },
+        {
+            label: 'Gender',
+            value: fullVoter.gender
+        },
+        {
+            label: 'Age',
+            value: fullVoter.age
+        }
+    ];
+
+    fields.forEach(field => {
+        if (field.value && field.value !== 'Unknown' && field.value !== 'N/A') {
+            html += `
+                <div style="padding: 10px; background: var(--light-color); border-radius: 8px;">
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px;">${field.label}</div>
+                    <div style="font-size: 14px; color: var(--text-color);">${field.value}</div>
+                </div>
+            `;
+        }
+    });
+
+    // Show assignment status
+    const isAssigned = fullVoter.currentAgent === window.assignmentData.selectedAgentId;
+    const isAssignedOther = fullVoter.currentAgent && fullVoter.currentAgent !== window.assignmentData.selectedAgentId;
+
+    if (isAssigned) {
+        const selectedAgent = window.assignmentData.agents.find(a => a.id === fullVoter.currentAgent);
+        html += `
+            <div style="padding: 10px; background: var(--success-50); border-radius: 8px; border: 2px solid var(--success-color);">
+                <div style="font-size: 11px; font-weight: 600; color: var(--success-color); text-transform: uppercase; margin-bottom: 4px;">Assignment Status</div>
+                <div style="font-size: 14px; color: var(--text-color);">Assigned to: ${selectedAgent ? selectedAgent.name : 'Current Agent'}</div>
+            </div>
+        `;
+    } else if (isAssignedOther) {
+        const otherAgent = window.assignmentData.agents.find(a => a.id === fullVoter.currentAgent);
+        html += `
+            <div style="padding: 10px; background: rgba(217, 119, 6, 0.1); border-radius: 8px; border: 2px solid var(--warning-color);">
+                <div style="font-size: 11px; font-weight: 600; color: var(--warning-color); text-transform: uppercase; margin-bottom: 4px;">Assignment Status</div>
+                <div style="font-size: 14px; color: var(--text-color);">Assigned to: ${otherAgent ? otherAgent.name : 'Another Agent'}</div>
+            </div>
+        `;
+    } else {
+        html += `
+            <div style="padding: 10px; background: var(--light-color); border-radius: 8px;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px;">Assignment Status</div>
+                <div style="font-size: 14px; color: var(--text-color);">Unassigned</div>
+            </div>
+        `;
+    }
+
+    html += `
+            </div>
+        </div>
+    `;
+
+    detailsContainer.innerHTML = html;
+}
+
+// Toggle voter assignment (single voter)
+async function toggleVoterAssignment(voterId, agentId, assign) {
+    if (!window.db || !window.userEmail) return;
+
+    try {
+        const {
+            doc,
+            updateDoc
+        } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+        const voterRef = doc(window.db, 'voters', voterId);
+
+        if (assign) {
+            await updateDoc(voterRef, {
+                assignedAgentId: agentId
+            });
+        } else {
+            await updateDoc(voterRef, {
+                assignedAgentId: null
+            });
+        }
+
+        // Update local data
+        const voter = window.assignmentData.voters.find(v => v.id === voterId);
+        if (voter) {
+            voter.currentAgent = assign ? agentId : null;
+        }
+
+        // Refresh the display
+        if (window.assignmentData.selectedAgentId) {
+            renderVotersForAssignment(window.assignmentData.selectedAgentId);
+        }
+
+        // Update details if this voter is currently shown
+        const detailsContainer = document.getElementById('voter-details-container');
+        if (detailsContainer && detailsContainer.querySelector(`[data-voter-id="${voterId}"]`)) {
+            showVoterDetailsForAssignment(voter);
+        }
+
+        // Show success message
+        if (window.showSuccess) {
+            window.showSuccess(assign ? 'Voter assigned successfully' : 'Voter unassigned successfully', 'Success');
+        }
+
+    } catch (error) {
+        console.error('Error toggling voter assignment:', error);
+        if (window.showErrorDialog) {
+            window.showErrorDialog('Failed to update assignment. Please try again.', 'Error');
+        }
+    }
+}
+
 window.saveBulkVoterAssignment = saveBulkVoterAssignment;
 window.toggleTreeNode = toggleTreeNode;
 window.toggleTreeView = toggleTreeView;
 window.toggleVoterFilters = toggleVoterFilters;
 window.viewAssignedVotersList = viewAssignedVotersList;
 window.downloadAssignedVotersList = downloadAssignedVotersList;
+window.showVoterDetailsForAssignment = showVoterDetailsForAssignment;
+window.toggleVoterAssignment = toggleVoterAssignment;
 
 // Toggle agent menu dropdown
 // Initialize Agent Actions Menu with Event Delegation
@@ -13814,4 +14763,4 @@ window.removeCallerName = removeCallerName;
 window.copyCallPasswordFromModal = copyCallPasswordFromModal;
 window.deleteCallLink = deleteCallLink;
 window.copyCallLinkFromModal = copyCallLinkFromModal;
-window.copyCallCodeFromModal = copyCallCodeFromModal;
+window.copyCallCodeFromModal = copyCallCodeFromModal
