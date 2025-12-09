@@ -7,7 +7,31 @@ const pageTemplates = {
             <p class="page-subtitle">Overview of your election campaign activities</p>
         </div>
         
-        <div class="stats-grid" id="dashboard-stats">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(111, 193, 218, 0.08) 0%, rgba(141, 212, 232, 0.08) 100%); border-radius: 12px; border: 1px solid rgba(111, 193, 218, 0.2);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span style="font-weight: 600; color: var(--text-color); font-size: 14px;">Dashboard Statistics</span>
+            </div>
+            <button id="dashboard-stats-toggle" class="stats-toggle-btn" onclick="toggleStats('dashboard')" aria-label="Toggle statistics">
+                <span class="stats-toggle-slider"></span>
+                <span class="stats-toggle-icon stats-toggle-icon-show">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </span>
+                <span class="stats-toggle-icon stats-toggle-icon-hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            </button>
+        </div>
+        
+        <div class="stats-grid" id="dashboard-stats-section" style="transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
             <div class="stat-card stat-card-primary">
                 <div class="stat-card-header">
                     <div class="stat-icon-wrapper stat-icon-primary">
@@ -135,7 +159,31 @@ const pageTemplates = {
             </div>
         </div>
         
-        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(111, 193, 218, 0.08) 0%, rgba(141, 212, 232, 0.08) 100%); border-radius: 12px; border: 1px solid rgba(111, 193, 218, 0.2);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span style="font-weight: 600; color: var(--text-color); font-size: 14px;">Voter Statistics</span>
+            </div>
+            <button id="voters-stats-toggle" class="stats-toggle-btn" onclick="toggleVotersStats()" aria-label="Toggle statistics">
+                <span class="stats-toggle-slider"></span>
+                <span class="stats-toggle-icon stats-toggle-icon-show">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </span>
+                <span class="stats-toggle-icon stats-toggle-icon-hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            </button>
+        </div>
+        
+        <div id="voters-stats-section" class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
             <div class="stat-card" style="background: white; padding: 18px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); overflow: hidden;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                     <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary-50); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -237,7 +285,31 @@ const pageTemplates = {
             </div>
         </div>
         
-        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(111, 193, 218, 0.08) 0%, rgba(141, 212, 232, 0.08) 100%); border-radius: 12px; border: 1px solid rgba(111, 193, 218, 0.2);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span style="font-weight: 600; color: var(--text-color); font-size: 14px;">Call Statistics</span>
+            </div>
+            <button id="calls-stats-toggle" class="stats-toggle-btn" onclick="toggleStats('calls')" aria-label="Toggle statistics">
+                <span class="stats-toggle-slider"></span>
+                <span class="stats-toggle-icon stats-toggle-icon-show">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </span>
+                <span class="stats-toggle-icon stats-toggle-icon-hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            </button>
+        </div>
+        
+        <div id="calls-stats-section" class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
             <div class="stat-card" style="background: white; padding: 18px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); overflow: hidden;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                     <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary-50); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -323,7 +395,31 @@ const pageTemplates = {
             </div>
         </div>
         
-        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(111, 193, 218, 0.08) 0%, rgba(141, 212, 232, 0.08) 100%); border-radius: 12px; border: 1px solid rgba(111, 193, 218, 0.2);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span style="font-weight: 600; color: var(--text-color); font-size: 14px;">Pledge Statistics</span>
+            </div>
+            <button id="pledges-stats-toggle" class="stats-toggle-btn" onclick="toggleStats('pledges')" aria-label="Toggle statistics">
+                <span class="stats-toggle-slider"></span>
+                <span class="stats-toggle-icon stats-toggle-icon-show">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </span>
+                <span class="stats-toggle-icon stats-toggle-icon-hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            </button>
+        </div>
+        
+        <div id="pledges-stats-section" class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
             <div class="stat-card" style="background: white; padding: 18px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); overflow: hidden;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                     <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(5, 150, 105, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -640,8 +736,32 @@ const pageTemplates = {
             </button>
         </div>
         
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(111, 193, 218, 0.08) 0%, rgba(141, 212, 232, 0.08) 100%); border-radius: 12px; border: 1px solid rgba(111, 193, 218, 0.2);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span style="font-weight: 600; color: var(--text-color); font-size: 14px;">Analytics Statistics</span>
+            </div>
+            <button id="analytics-stats-toggle" class="stats-toggle-btn" onclick="toggleStats('analytics')" aria-label="Toggle statistics">
+                <span class="stats-toggle-slider"></span>
+                <span class="stats-toggle-icon stats-toggle-icon-show">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </span>
+                <span class="stats-toggle-icon stats-toggle-icon-hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            </button>
+        </div>
+        
         <!-- Key Metrics Overview -->
-        <div class="analytics-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div id="analytics-stats-section" class="analytics-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
             <div class="stat-card" style="background: white; padding: 18px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); overflow: hidden;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                     <div style="width: 44px; height: 44px; border-radius: 10px; background: var(--primary-50); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -1023,6 +1143,13 @@ function _loadPageContentInternal(section) {
                 // Reset styles immediately for instant display when using cache
                 contentArea.style.opacity = '1';
                 contentArea.style.transform = 'translateY(0)';
+
+                // Restore statistics visibility for pages with statistics
+                if (['dashboard', 'voters', 'calls', 'pledges', 'analytics'].includes(section)) {
+                    setTimeout(() => {
+                        restoreStatsVisibility(section);
+                    }, 100);
+                }
                 contentArea.style.transition = 'opacity 0.12s ease-in, transform 0.12s ease-in';
                 contentArea.style.willChange = 'contents';
 
@@ -1045,6 +1172,10 @@ function _loadPageContentInternal(section) {
                 } else if (section === 'voters') {
                     loadVotersData();
                     setupSearchListeners('voters');
+                    // Restore statistics visibility preference
+                    setTimeout(() => {
+                        restoreVotersStatsVisibility();
+                    }, 200);
                 } else if (section === 'events') {
                     loadEventsData();
                     setupSearchListeners('events');
@@ -2149,8 +2280,265 @@ function throttle(func, limit) {
     };
 }
 
+// Cache for image filenames to avoid repeated lookups
+const imageFilenameCache = new Map();
+// Cache for failed lookups to avoid repeated attempts  
+const imageNotFoundCache = new Set();
+// Pending image lookups to avoid duplicate requests
+const pendingImageLookups = new Map();
+
+// Function to get voter image URL, checking images folder first based on ID card number
+// Returns the best available image URL (existing imageUrl takes priority, then images folder)
+// This is a synchronous function that returns immediately (uses cache or returns empty for async lookup)
+function getVoterImageUrl(voterData, idCardNumber = null) {
+    // Get existing image URL from voter data first (highest priority)
+    if (!voterData) {
+        return '';
+    }
+    const existingImageUrl = voterData.imageUrl || voterData.image || voterData.photo || voterData.photoUrl || '';
+
+    // If we already have a valid image URL, use it
+    if (existingImageUrl && existingImageUrl.trim()) {
+        return existingImageUrl;
+    }
+
+    // Get ID card number from voter data or parameter
+    const idNumber = idCardNumber || voterData.idNumber || voterData.voterId || '';
+
+    if (!idNumber || !idNumber.trim()) {
+        return '';
+    }
+
+    // Normalize ID card number (remove spaces, convert to uppercase)
+    const normalizedId = idNumber.trim().toUpperCase();
+
+    // Check cache first
+    if (imageFilenameCache.has(normalizedId)) {
+        const cachedUrl = imageFilenameCache.get(normalizedId);
+        if (cachedUrl) {
+            return cachedUrl;
+        }
+    }
+
+    // Skip if we've already determined no image exists for this ID
+    if (imageNotFoundCache.has(normalizedId)) {
+        return '';
+    }
+
+    // Return empty - the image will be looked up asynchronously
+    // The lookupImageFromFolder function will be called to find it
+    return '';
+}
+
+// Async function to lookup image from images folder by ID card number
+// This calls the server endpoint to find matching images
+async function lookupImageFromFolder(idCardNumber) {
+    if (!idCardNumber || !idCardNumber.trim()) {
+        return null;
+    }
+
+    const normalizedId = idCardNumber.trim().toUpperCase();
+
+    // Check cache first
+    if (imageFilenameCache.has(normalizedId)) {
+        return imageFilenameCache.get(normalizedId);
+    }
+
+    // Skip if we've already determined no image exists
+    if (imageNotFoundCache.has(normalizedId)) {
+        return null;
+    }
+
+    // Check if there's already a pending lookup for this ID
+    if (pendingImageLookups.has(normalizedId)) {
+        return await pendingImageLookups.get(normalizedId);
+    }
+
+    // Create a promise for this lookup
+    const lookupPromise = (async () => {
+        try {
+            const apiUrl = `/api/find-image?id=${encodeURIComponent(normalizedId)}`;
+            console.log(`[Image Lookup] Searching for image with ID: ${normalizedId}`);
+            const response = await fetch(apiUrl);
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`[Image Lookup] Response for ${normalizedId}:`, data);
+                if (data.found && data.url) {
+                    // Cache the result
+                    imageFilenameCache.set(normalizedId, data.url);
+                    console.log(`[Image Lookup] Found image for ${normalizedId}: ${data.url}`);
+                    return data.url;
+                } else {
+                    // No image found, cache the negative result
+                    imageNotFoundCache.add(normalizedId);
+                    console.log(`[Image Lookup] No image found for ${normalizedId}`);
+                    return null;
+                }
+            } else {
+                console.warn(`[Image Lookup] API request failed for ${normalizedId}:`, response.status, response.statusText);
+            }
+        } catch (error) {
+            console.warn(`[Image Lookup] Failed to lookup image for ID ${normalizedId}:`, error);
+        } finally {
+            // Remove from pending lookups
+            pendingImageLookups.delete(normalizedId);
+        }
+        return null;
+    })();
+
+    // Store the pending lookup
+    pendingImageLookups.set(normalizedId, lookupPromise);
+
+    return await lookupPromise;
+}
+
+// Function to try loading image from images folder when main image fails
+// This is called from image onerror handlers
+async function tryLoadImageFromFolder(imgElement, idCardNumber) {
+    if (!idCardNumber || !idCardNumber.trim() || !imgElement) {
+        return false;
+    }
+
+    const imageUrl = await lookupImageFromFolder(idCardNumber);
+    if (imageUrl) {
+        imgElement.src = imageUrl;
+        return true;
+    }
+
+    return false;
+}
+
 // Make utilities globally available
 window.renderTableOptimized = renderTableOptimized;
+
+// Generic toggle function for all statistics sections
+function toggleStats(sectionName) {
+    const sectionMap = {
+        'dashboard': {
+            section: 'dashboard-stats-section',
+            toggle: 'dashboard-stats-toggle'
+        },
+        'voters': {
+            section: 'voters-stats-section',
+            toggle: 'voters-stats-toggle'
+        },
+        'calls': {
+            section: 'calls-stats-section',
+            toggle: 'calls-stats-toggle'
+        },
+        'pledges': {
+            section: 'pledges-stats-section',
+            toggle: 'pledges-stats-toggle'
+        },
+        'analytics': {
+            section: 'analytics-stats-section',
+            toggle: 'analytics-stats-toggle'
+        }
+    };
+
+    const config = sectionMap[sectionName];
+    if (!config) return;
+
+    const statsSection = document.getElementById(config.section);
+    const toggleBtn = document.getElementById(config.toggle);
+
+    if (!statsSection || !toggleBtn) return;
+
+    const isHidden = statsSection.style.display === 'none' ||
+        statsSection.style.maxHeight === '0px' ||
+        statsSection.classList.contains('stats-hidden');
+
+    if (isHidden) {
+        // Show statistics
+        statsSection.style.display = statsSection.classList.contains('analytics-stats-grid') ? 'grid' : 'grid';
+        statsSection.style.maxHeight = '1000px';
+        statsSection.style.opacity = '1';
+        statsSection.classList.remove('stats-hidden');
+        toggleBtn.classList.add('stats-toggle-active');
+        toggleBtn.setAttribute('aria-pressed', 'true');
+
+        // Save preference
+        localStorage.setItem(`${sectionName}StatsVisible`, 'true');
+    } else {
+        // Hide statistics
+        statsSection.style.maxHeight = '0px';
+        statsSection.style.opacity = '0';
+        statsSection.classList.add('stats-hidden');
+
+        // Wait for animation then hide
+        setTimeout(() => {
+            if (statsSection.style.maxHeight === '0px') {
+                statsSection.style.display = 'none';
+            }
+        }, 400);
+
+        toggleBtn.classList.remove('stats-toggle-active');
+        toggleBtn.setAttribute('aria-pressed', 'false');
+
+        // Save preference
+        localStorage.setItem(`${sectionName}StatsVisible`, 'false');
+    }
+}
+
+// Make toggle function globally available
+window.toggleStats = toggleStats;
+window.toggleVotersStats = () => toggleStats('voters'); // Keep for backward compatibility
+
+// Restore statistics visibility preference on page load
+function restoreStatsVisibility(sectionName) {
+    const sectionMap = {
+        'dashboard': {
+            section: 'dashboard-stats-section',
+            toggle: 'dashboard-stats-toggle'
+        },
+        'voters': {
+            section: 'voters-stats-section',
+            toggle: 'voters-stats-toggle'
+        },
+        'calls': {
+            section: 'calls-stats-section',
+            toggle: 'calls-stats-toggle'
+        },
+        'pledges': {
+            section: 'pledges-stats-section',
+            toggle: 'pledges-stats-toggle'
+        },
+        'analytics': {
+            section: 'analytics-stats-section',
+            toggle: 'analytics-stats-toggle'
+        }
+    };
+
+    const config = sectionMap[sectionName];
+    if (!config) return;
+
+    const statsSection = document.getElementById(config.section);
+    const toggleBtn = document.getElementById(config.toggle);
+
+    if (!statsSection || !toggleBtn) return;
+
+    const savedPreference = localStorage.getItem(`${sectionName}StatsVisible`);
+    if (savedPreference === 'false') {
+        statsSection.style.display = 'none';
+        statsSection.style.maxHeight = '0px';
+        statsSection.style.opacity = '0';
+        statsSection.classList.add('stats-hidden');
+        toggleBtn.classList.remove('stats-toggle-active');
+        toggleBtn.setAttribute('aria-pressed', 'false');
+    } else {
+        statsSection.style.display = statsSection.classList.contains('analytics-stats-grid') ? 'grid' : 'grid';
+        statsSection.style.maxHeight = '1000px';
+        statsSection.style.opacity = '1';
+        statsSection.classList.remove('stats-hidden');
+        toggleBtn.classList.add('stats-toggle-active');
+        toggleBtn.setAttribute('aria-pressed', 'true');
+    }
+}
+
+// Backward compatibility function
+function restoreVotersStatsVisibility() {
+    restoreStatsVisibility('voters');
+}
 window.createRowFromHTML = createRowFromHTML;
 window.createRowsBatch = createRowsBatch;
 window.debounce = debounce;
@@ -2914,9 +3302,9 @@ function renderCachedVotersData() {
 
     // Track search state to detect changes - only reset to page 1 when search actually changes
     if (!paginationState.voters.lastSearchTerm) paginationState.voters.lastSearchTerm = '';
-    
+
     const searchChanged = paginationState.voters.lastSearchTerm !== searchTerm;
-    
+
     // Only reset to page 1 if search changed (not on pagination navigation)
     if (searchChanged) {
         paginationState.voters.currentPage = 1;
@@ -2970,19 +3358,22 @@ function renderCachedVotersData() {
         }
 
         const initials = data.name ? data.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
-        const imageUrl = data.imageUrl || data.image || '';
         const idNumber = data.idNumber || data.voterId || id;
         const permanentAddress = (data.permanentAddress && data.permanentAddress.trim()) || (data.address && data.address.trim()) || 'N/A';
         const currentLocation = (data.currentLocation && data.currentLocation.trim()) || (data.location && data.location.trim()) || 'N/A';
+
+        // Get image URL, checking images folder if needed
+        let imageUrl = getVoterImageUrl(data, idNumber);
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td style="text-align: center; color: var(--text-light); font-weight: 600;">${rowNumber}</td>
             <td>
                 ${imageUrl ? 
-                    `<img src="${imageUrl}" alt="${data.name || 'Voter'}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
+                    `<img src="${imageUrl}" alt="${data.name || 'Voter'}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" data-voter-id="${idNumber || ''}" onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${idNumber || ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });">` :
                     `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>`
                 }
+                ${imageUrl ? `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>` : ''}
             </td>
             <td>
                 <div class="table-cell-user">
@@ -3001,6 +3392,39 @@ function renderCachedVotersData() {
             </td>
         `;
         fragment.appendChild(row);
+
+        // If no image URL found, try to lookup from images folder asynchronously
+        if (!imageUrl && idNumber && idNumber.trim()) {
+            // Start async lookup - will update image when found
+            lookupImageFromFolder(idNumber).then(foundUrl => {
+                if (foundUrl) {
+                    // Find the avatar div (initials) and replace it with image
+                    const avatarDiv = row.querySelector('.user-avatar');
+                    if (avatarDiv) {
+                        const img = document.createElement('img');
+                        img.src = foundUrl;
+                        img.alt = data.name || 'Voter';
+                        img.className = 'voter-image';
+                        img.loading = 'lazy';
+                        img.style.cssText = 'width: 40px; height: 40px; border-radius: 50%; object-fit: cover;';
+                        img.setAttribute('data-voter-id', idNumber);
+                        img.onerror = function() {
+                            // If image fails to load, show initials again
+                            this.style.display = 'none';
+                            const fallback = document.createElement('div');
+                            fallback.className = 'user-avatar';
+                            fallback.style.cssText = 'width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;';
+                            fallback.textContent = initials;
+                            this.parentNode.replaceChild(fallback, this);
+                        };
+                        avatarDiv.parentNode.replaceChild(img, avatarDiv);
+                    }
+                }
+            }).catch((error) => {
+                console.warn(`Failed to load image for voter ${idNumber}:`, error);
+            });
+        }
+
         rowNumber++;
     });
 
@@ -3301,10 +3725,12 @@ async function loadVotersData(forceRefresh = false) {
             }
 
             const initials = data.name ? data.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
-            const imageUrl = data.imageUrl || data.image || '';
 
             // Use actual ID number fields, avoid using doc.id as fallback
             let idNumber = data.idNumber || data.voterId || 'N/A';
+
+            // Get image URL, checking images folder if needed
+            let imageUrl = getVoterImageUrl(data, idNumber !== 'N/A' ? idNumber : null);
             // Ensure we never use document IDs - if idNumber looks like a Firestore ID, set to N/A
             if (idNumber && idNumber.length === 20 && /^[A-Za-z0-9]{20}$/.test(idNumber)) {
                 idNumber = 'N/A'; // Likely a Firestore document ID, don't use it
@@ -3324,7 +3750,7 @@ async function loadVotersData(forceRefresh = false) {
                 <td style="text-align: center; color: var(--text-light); font-weight: 600;">${rowNumber}</td>
                 <td>
                     ${imageUrl ? 
-                        `<img src="${imageUrl}" alt="${data.name || 'Voter'}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
+                        `<img src="${imageUrl}" alt="${data.name || 'Voter'}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" data-voter-id="${idNumber !== 'N/A' ? idNumber : ''}" onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${idNumber !== 'N/A' ? idNumber : ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });"><div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>` :
                         `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>`
                     }
                 </td>
@@ -3346,6 +3772,36 @@ async function loadVotersData(forceRefresh = false) {
             `;
 
             fragment.appendChild(row);
+
+            // If no image URL found, try to lookup from images folder asynchronously
+            if (!imageUrl && idNumber && idNumber !== 'N/A' && idNumber.trim()) {
+                lookupImageFromFolder(idNumber).then(foundUrl => {
+                    if (foundUrl) {
+                        const img = row.querySelector(`img[data-voter-id="${idNumber}"]`);
+                        if (img) {
+                            img.src = foundUrl;
+                            img.style.display = '';
+                            const fallback = img.nextElementSibling;
+                            if (fallback && fallback.classList.contains('user-avatar')) {
+                                fallback.style.display = 'none';
+                            }
+                        } else {
+                            const avatarDiv = row.querySelector('.user-avatar');
+                            if (avatarDiv) {
+                                const img = document.createElement('img');
+                                img.src = foundUrl;
+                                img.alt = data.name || 'Voter';
+                                img.className = 'voter-image';
+                                img.loading = 'lazy';
+                                img.style.cssText = 'width: 40px; height: 40px; border-radius: 50%; object-fit: cover;';
+                                img.setAttribute('data-voter-id', idNumber);
+                                avatarDiv.parentNode.replaceChild(img, avatarDiv);
+                            }
+                        }
+                    }
+                }).catch(() => {});
+            }
+
             rowNumber++;
         }
 
@@ -4421,7 +4877,8 @@ async function loadPledgesData(forceRefresh = false) {
                 idNumber = pledgeData.voterId || 'N/A';
             }
 
-            const imageUrl = voterData ? (voterData.imageUrl || voterData.image || '') : (pledgeData.image || '');
+            // Get image URL using the function that checks images folder
+            let imageUrl = getVoterImageUrl(voterData || pledgeData, idNumber !== 'N/A' ? idNumber : null);
             const permanentAddress = voterData ?
                 ((voterData.permanentAddress && voterData.permanentAddress.trim()) || (voterData.address && voterData.address.trim()) || 'N/A') :
                 ((pledgeData.permanentAddress && pledgeData.permanentAddress.trim()) || 'N/A');
@@ -4456,8 +4913,8 @@ async function loadPledgesData(forceRefresh = false) {
                 <td style="text-align: center; color: var(--text-light); font-weight: 600;">${rowNumber}</td>
                 <td>
                     ${imageUrl ? 
-                        `<img src="${imageUrl}" alt="${voterName}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
-                        `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>`
+                        `<img src="${imageUrl}" alt="${voterName}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" data-voter-id="${idNumber !== 'N/A' ? idNumber : ''}" onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${idNumber !== 'N/A' ? idNumber : ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });"><div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>` :
+                        `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;" data-voter-id="${idNumber !== 'N/A' ? idNumber : ''}">${initials}</div>`
                     }
                 </td>
                 <td>${idNumber}</td>
@@ -4657,14 +5114,14 @@ function renderCachedPledgesData() {
     if (!paginationState.pledges.hasOwnProperty('lastFilterValue')) {
         paginationState.pledges.lastFilterValue = '';
     }
-    
+
     // Check if filter/search changed - only reset to page 1 if filter actually changed
     const previousSearchTerm = paginationState.pledges.lastSearchTerm || '';
     const previousFilterValue = paginationState.pledges.lastFilterValue || '';
-    
+
     // Only reset to page 1 if the filter/search actually changed (not on pagination navigation)
     const filterChanged = (searchTerm !== previousSearchTerm) || (filterValue !== previousFilterValue);
-    
+
     if (filterChanged) {
         console.log('[Pagination] Filter/search changed, resetting to page 1', {
             previousSearch: previousSearchTerm,
@@ -4674,7 +5131,7 @@ function renderCachedPledgesData() {
         });
         paginationState.pledges.currentPage = 1;
     }
-    
+
     // Always update the last known filter/search values (to track current state)
     paginationState.pledges.lastSearchTerm = searchTerm;
     paginationState.pledges.lastFilterValue = filterValue;
@@ -4693,12 +5150,12 @@ function renderCachedPledgesData() {
     const state = paginationState.pledges;
     const totalFiltered = filteredPledges.length;
     const maxPage = Math.ceil(totalFiltered / state.recordsPerPage);
-    
+
     // Ensure current page doesn't exceed max page for filtered results
     if (state.currentPage > maxPage && maxPage > 0) {
         state.currentPage = maxPage;
     }
-    
+
     const startIndex = (state.currentPage - 1) * state.recordsPerPage;
     const endIndex = startIndex + state.recordsPerPage;
     const paginatedPledges = filteredPledges.slice(startIndex, endIndex);
@@ -4713,7 +5170,8 @@ function renderCachedPledgesData() {
 
         const voterName = voterData ? (voterData.name || pledgeData.voterName || 'N/A') : (pledgeData.voterName || 'N/A');
         const idNumber = voterData ? (voterData.idNumber || voterData.voterId || 'N/A') : (pledgeData.voterId || 'N/A');
-        const imageUrl = voterData ? (voterData.imageUrl || voterData.image || '') : (pledgeData.image || '');
+        // Get image URL using the function that checks images folder
+        let imageUrl = getVoterImageUrl(voterData || pledgeData, idNumber !== 'N/A' ? idNumber : null);
         const permanentAddress = voterData ?
             ((voterData.permanentAddress && voterData.permanentAddress.trim()) || (voterData.address && voterData.address.trim()) || 'N/A') :
             ((pledgeData.permanentAddress && pledgeData.permanentAddress.trim()) || 'N/A');
@@ -4744,8 +5202,8 @@ function renderCachedPledgesData() {
             <td style="text-align: center; color: var(--text-light); font-weight: 600;">${rowNumber}</td>
             <td>
                 ${imageUrl ? 
-                    `<img src="${imageUrl}" alt="${voterName}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` :
-                    `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>`
+                    `<img src="${imageUrl}" alt="${voterName}" class="voter-image" loading="lazy" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" data-voter-id="${idNumber !== 'N/A' ? idNumber : ''}" onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${idNumber !== 'N/A' ? idNumber : ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });"><div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;">${initials}</div>` :
+                    `<div class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 600; font-size: 14px;" data-voter-id="${idNumber !== 'N/A' ? idNumber : ''}">${initials}</div>`
                 }
             </td>
             <td>${idNumber}</td>
@@ -4782,6 +5240,40 @@ function renderCachedPledgesData() {
             </td>
         `;
         fragment.appendChild(row);
+
+        // If no image URL found, try to lookup from images folder asynchronously
+        if (!imageUrl && idNumber && idNumber !== 'N/A' && idNumber.trim()) {
+            lookupImageFromFolder(idNumber).then(foundUrl => {
+                if (foundUrl) {
+                    // Find the image element and update it
+                    let img = row.querySelector(`img[data-voter-id="${idNumber}"]`);
+                    if (img) {
+                        img.src = foundUrl;
+                        img.style.display = '';
+                        const fallback = img.nextElementSibling;
+                        if (fallback && fallback.classList.contains('user-avatar')) {
+                            fallback.style.display = 'none';
+                        }
+                    } else {
+                        // If no img element (we showed initials), create one
+                        const avatarDiv = row.querySelector(`.user-avatar[data-voter-id="${idNumber}"]`);
+                        if (avatarDiv) {
+                            img = document.createElement('img');
+                            img.src = foundUrl;
+                            img.alt = voterName || 'Voter';
+                            img.className = 'voter-image';
+                            img.loading = 'lazy';
+                            img.style.cssText = 'width: 40px; height: 40px; border-radius: 50%; object-fit: cover;';
+                            img.setAttribute('data-voter-id', idNumber);
+                            avatarDiv.parentNode.replaceChild(img, avatarDiv);
+                        }
+                    }
+                }
+            }).catch(() => {
+                // Silently fail - fallback will show
+            });
+        }
+
         rowNumber++;
     });
 
@@ -9530,9 +10022,16 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
             }
         }
 
-        // Get voter image or generate initials
-        const imageUrl = data.imageUrl || data.image || '';
+        // Get voter image or generate initials - use the same function that checks images folder
+        const idNumber = data.idNumber || data.voterId || '';
+        let imageUrl = getVoterImageUrl(data, idNumber);
         const initials = data.name ? data.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
+
+        // If no image URL found, try to lookup from images folder asynchronously
+        let imageLookupPromise = null;
+        if (!imageUrl && idNumber && idNumber.trim()) {
+            imageLookupPromise = lookupImageFromFolder(idNumber);
+        }
 
         // Create modal HTML
         const modalHTML = `
@@ -9565,8 +10064,8 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
 
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     ${imageUrl ? 
-                        `<img src="${imageUrl}" alt="${data.name || 'Voter'}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);">` :
-                        `<div style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>`
+                        `<img id="voter-detail-image" src="${imageUrl}" alt="${data.name || 'Voter'}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);" data-voter-id="${idNumber || ''}" onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${idNumber || ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });"><div id="voter-detail-fallback" style="width: 80px; height: 80px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>` :
+                        `<div id="voter-detail-fallback" style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>`
                     }
                     <div>
                         <h2 style="margin: 0; color: var(--text-color); font-size: 24px; font-weight: 700;">${(data.name && data.name.trim()) ? data.name.trim() : 'N/A'}</h2>
@@ -9722,6 +10221,41 @@ async function viewVoterDetails(voterId, navigateDirection = null) {
             if (modalTitle) modalTitle.textContent = 'Voter Details';
             if (modalBody) {
                 modalBody.innerHTML = modalHTML;
+
+                // If we started an async image lookup, update the image when found
+                if (imageLookupPromise) {
+                    imageLookupPromise.then(foundUrl => {
+                        if (foundUrl) {
+                            const detailImg = modalBody.querySelector('#voter-detail-image');
+                            const detailFallback = modalBody.querySelector('#voter-detail-fallback');
+
+                            if (detailImg) {
+                                detailImg.src = foundUrl;
+                                detailImg.style.display = '';
+                                if (detailFallback) {
+                                    detailFallback.style.display = 'none';
+                                }
+                            } else if (detailFallback) {
+                                // If no img element exists, create one
+                                const img = document.createElement('img');
+                                img.id = 'voter-detail-image';
+                                img.src = foundUrl;
+                                img.alt = data.name || 'Voter';
+                                img.style.cssText = 'width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);';
+                                img.setAttribute('data-voter-id', idNumber);
+                                img.onerror = function() {
+                                    this.style.display = 'none';
+                                    if (detailFallback) {
+                                        detailFallback.style.display = 'flex';
+                                    }
+                                };
+                                detailFallback.parentNode.replaceChild(img, detailFallback);
+                            }
+                        }
+                    }).catch(() => {
+                        // Silently fail - fallback will show
+                    });
+                }
             }
             modalOverlay.style.display = 'flex';
         });
@@ -10192,8 +10726,15 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
 
         // Get voter name - prioritize voter data
         const voterName = voterData ? (voterData.name || pledgeData.voterName || 'N/A') : (pledgeData.voterName || 'N/A');
-        const imageUrl = voterData ? (voterData.imageUrl || voterData.image || '') : (pledgeData.image || '');
+        // Get image URL using the function that checks images folder
+        let imageUrl = getVoterImageUrl(voterData || pledgeData, idNumber !== 'N/A' ? idNumber : null);
         const initials = voterName && voterName !== 'N/A' ? voterName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
+
+        // If no image URL found, try to lookup from images folder asynchronously
+        let imageLookupPromise = null;
+        if (!imageUrl && idNumber && idNumber !== 'N/A' && idNumber.trim()) {
+            imageLookupPromise = lookupImageFromFolder(idNumber);
+        }
 
         // Get ID number - prioritize voter data fields, NEVER use document IDs
         let idNumber = 'N/A';
@@ -10273,8 +10814,8 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
 
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border-color);">
                     ${imageUrl ? 
-                        `<img src="${imageUrl}" alt="${voterName}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);">` :
-                        `<div style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>`
+                        `<img id="pledge-detail-image" src="${imageUrl}" alt="${voterName}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);" data-voter-id="${idNumber !== 'N/A' ? idNumber : ''}" onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${idNumber !== 'N/A' ? idNumber : ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });"><div id="pledge-detail-fallback" style="width: 80px; height: 80px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>` :
+                        `<div id="pledge-detail-fallback" style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 28px; border: 3px solid var(--primary-color);">${initials}</div>`
                     }
                     <div>
                         <h2 style="margin: 0; color: var(--text-color); font-size: 24px; font-weight: 700;">${(voterName && voterName.trim()) ? voterName.trim() : 'N/A'}</h2>
@@ -10448,6 +10989,41 @@ async function viewPledgeDetails(pledgeId, navigateDirection = null) {
             if (modalTitle) modalTitle.textContent = 'Pledge Details';
             if (modalBody) {
                 modalBody.innerHTML = modalHTML;
+
+                // If we started an async image lookup, update the image when found
+                if (imageLookupPromise) {
+                    imageLookupPromise.then(foundUrl => {
+                        if (foundUrl) {
+                            const detailImg = modalBody.querySelector('#pledge-detail-image');
+                            const detailFallback = modalBody.querySelector('#pledge-detail-fallback');
+
+                            if (detailImg) {
+                                detailImg.src = foundUrl;
+                                detailImg.style.display = '';
+                                if (detailFallback) {
+                                    detailFallback.style.display = 'none';
+                                }
+                            } else if (detailFallback) {
+                                // If no img element exists, create one
+                                const img = document.createElement('img');
+                                img.id = 'pledge-detail-image';
+                                img.src = foundUrl;
+                                img.alt = voterName || 'Voter';
+                                img.style.cssText = 'width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color);';
+                                img.setAttribute('data-voter-id', idNumber !== 'N/A' ? idNumber : '');
+                                img.onerror = function() {
+                                    this.style.display = 'none';
+                                    if (detailFallback) {
+                                        detailFallback.style.display = 'flex';
+                                    }
+                                };
+                                detailFallback.parentNode.replaceChild(img, detailFallback);
+                            }
+                        }
+                    }).catch(() => {
+                        // Silently fail - fallback will show
+                    });
+                }
             }
             modalOverlay.style.display = 'flex';
         });
@@ -12337,69 +12913,150 @@ async function viewCallDetails(callId, navigateDirection = null) {
                 <div style="display: grid; gap: 1.5rem;">
                     <div style="background: var(--light-color); padding: 1.25rem; border-radius: 12px;">
                         <div style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Voter Information</div>
-                        <div style="font-size: 1.125rem; font-weight: 600; color: var(--text-color); margin-bottom: 0.25rem;">${callData.voterName || 'N/A'}</div>
-                        <div style="font-size: 0.875rem; color: var(--text-light);">ID: ${callData.voterId || 'N/A'}</div>
-                        ${callData.phone ? `<div style="font-size: 0.875rem; color: var(--text-light); margin-top: 0.25rem;">Phone: ${callData.phone}</div>` : ''}
-                    </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            ${(() => {
+                                const voterIdNumber = callData.voterId || '';
+                                const voterName = callData.voterName || 'N/A';
+                                const initials = voterName && voterName !== 'N/A' ? voterName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
+                                const imageUrl = voterIdNumber ? getVoterImageUrl({}, voterIdNumber) : '';
+                                return imageUrl ? 
+                                    ` < img id = "call-detail-image"
+        src = "${imageUrl}"
+        alt = "${voterName}"
+        style = "width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);"
+        data - voter - id = "${voterIdNumber}"
+        onerror = "this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${voterIdNumber}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });" > < div id = "call-detail-fallback"
+        style = "width: 60px; height: 60px; border-radius: 50%; display: none; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 20px; border: 2px solid var(--primary-color);" > $ {
+            initials
+        } < /div>` :
+        `<div id="call-detail-fallback" style="width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 20px; border: 2px solid var(--primary-color);">${initials}</div>`;
+    })()
+} <
+div >
+    <
+    div style = "font-size: 1.125rem; font-weight: 600; color: var(--text-color); margin-bottom: 0.25rem;" > $ {
+        callData.voterName || 'N/A'
+    } < /div> <
+div style = "font-size: 0.875rem; color: var(--text-light);" > ID: $ {
+    callData.voterId || 'N/A'
+} < /div>
+$ {
+    callData.phone ?
+        <
+        div style = "font-size: 0.875rem; color: var(--text-light); margin-top: 0.25rem;" > Phone : $ {
+            callData.phone
+        } < /div>
+} <
+/div> < /
+div > <
+    /div>
 
-                    <div style="background: var(--light-color); padding: 1.25rem; border-radius: 12px;">
-                        <div style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Call Information</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div>
-                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Caller</div>
-                                <div style="font-size: 0.9375rem; font-weight: 600; color: var(--text-color);">${callData.caller || 'N/A'}</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Date & Time</div>
-                                <div style="font-size: 0.9375rem; font-weight: 600; color: var(--text-color);">${dateStr}</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;">Status</div>
-                                <div><span class="status-badge ${statusClass}">${statusText}</span></div>
-                            </div>
-                        </div>
-                    </div>
+    <
+    div style = "background: var(--light-color); padding: 1.25rem; border-radius: 12px;" >
+    <
+    div style = "font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;" > Call Information < /div> <
+div style = "display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" >
+    <
+    div >
+    <
+    div style = "font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;" > Caller < /div> <
+div style = "font-size: 0.9375rem; font-weight: 600; color: var(--text-color);" > $ {
+    callData.caller || 'N/A'
+} < /div> < /
+div > <
+    div >
+    <
+    div style = "font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;" > Date & Time < /div> <
+div style = "font-size: 0.9375rem; font-weight: 600; color: var(--text-color);" > $ {
+    dateStr
+} < /div> < /
+div > <
+    div >
+    <
+    div style = "font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem;" > Status < /div> <
+div > < span class = "status-badge ${statusClass}" > $ {
+        statusText
+    } < /span></div >
+    <
+    /div> < /
+div > <
+    /div>
 
-                    ${callData.notes ? `
-                    <div style="background: var(--light-color); padding: 1.25rem; border-radius: 12px;">
-                        <div style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Notes</div>
-                        <div style="font-size: 0.9375rem; color: var(--text-color); line-height: 1.6; white-space: pre-wrap;">${callData.notes}</div>
-                    </div>
-                    ` : ''}
+$ {
+    callData.notes ?
+        <
+        div style = "background: var(--light-color); padding: 1.25rem; border-radius: 12px;" >
+        <
+        div style = "font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;" > Notes < /div> <
+    div style = "font-size: 0.9375rem; color: var(--text-color); line-height: 1.6; white-space: pre-wrap;" > $ {
+        callData.notes
+    } < /div> < /
+    div >
+}
 
-                    <!-- Navigation at bottom -->
-                    ${allCalls.length > 1 ? `
-                    <div style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                        <div style="display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;">
-                            <button 
-                                class="btn-secondary btn-compact" 
-                                ${currentIndex === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-                                onclick="viewCallDetails('${callId}', 'prev')"
-                                style="display: flex; align-items: center; gap: 6px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="15 18 9 12 15 6"></polyline>
-                                </svg>
-                                Previous
-                            </button>
-                            <span style="color: var(--text-light); font-size: 12px; padding: 8px 8px; display: flex; align-items: center; white-space: nowrap; flex-shrink: 0;">
-                                ${currentIndex + 1} of ${allCalls.length}
-                            </span>
-                            <button 
-                                class="btn-secondary btn-compact" 
-                                ${currentIndex === allCalls.length - 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-                                onclick="viewCallDetails('${callId}', 'next')"
-                                style="display: flex; align-items: center; gap: 6px;">
-                                Next
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
+$ {
+    allCalls.length > 1 ?
+        <
+        div style = "display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); overflow-x: auto; -webkit-overflow-scrolling: touch;" >
+        <
+        div style = "display: flex; gap: 6px; flex-wrap: nowrap; flex-shrink: 0;" >
+        <
+        button
+    class = "btn-secondary btn-compact"
+    $ {
+        currentIndex === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''
+    }
+    onclick = "viewCallDetails('${callId}', 'prev')"
+    style = "display: flex; align-items: center; gap: 6px;" >
+        <
+        svg xmlns = "http://www.w3.org/2000/svg"
+    width = "16"
+    height = "16"
+    viewBox = "0 0 24 24"
+    fill = "none"
+    stroke = "currentColor"
+    stroke - width = "2"
+    stroke - linecap = "round"
+    stroke - linejoin = "round" >
+        <
+        polyline points = "15 18 9 12 15 6" > < /polyline> < /
+        svg >
+        Previous <
+        /button> <
+    span style = "color: var(--text-light); font-size: 12px; padding: 8px 8px; display: flex; align-items: center; white-space: nowrap; flex-shrink: 0;" >
+        $ {
+            currentIndex + 1
+        } of $ {
+            allCalls.length
+        } <
+        /span> <
+    button
+    class = "btn-secondary btn-compact"
+    $ {
+        currentIndex === allCalls.length - 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''
+    }
+    onclick = "viewCallDetails('${callId}', 'next')"
+    style = "display: flex; align-items: center; gap: 6px;" >
+        Next <
+        svg xmlns = "http://www.w3.org/2000/svg"
+    width = "16"
+    height = "16"
+    viewBox = "0 0 24 24"
+    fill = "none"
+    stroke = "currentColor"
+    stroke - width = "2"
+    stroke - linecap = "round"
+    stroke - linejoin = "round" >
+        <
+        polyline points = "9 18 15 12 9 6" > < /polyline> < /
+        svg > <
+        /button> < /
+        div > <
+        /div>
+} <
+/div> < /
+div >
+    `;
 
         // Open modal using the existing modal system
         if (window.openModal) {
@@ -12411,6 +13068,46 @@ async function viewCallDetails(callId, navigateDirection = null) {
                 if (modalTitle && modalBody) {
                     modalTitle.textContent = 'Call Details';
                     modalBody.innerHTML = modalContent;
+                    
+                    // If voterId exists, try to lookup image from images folder asynchronously
+                    const voterIdNumber = callData.voterId || '';
+                    if (voterIdNumber && voterIdNumber.trim()) {
+                        const currentImageUrl = getVoterImageUrl({}, voterIdNumber);
+                        if (!currentImageUrl) {
+                            lookupImageFromFolder(voterIdNumber).then(foundUrl => {
+                                if (foundUrl) {
+                                    const detailImg = modalBody.querySelector('#call-detail-image');
+                                    const detailFallback = modalBody.querySelector('#call-detail-fallback');
+                                    
+                                    if (detailImg) {
+                                        detailImg.src = foundUrl;
+                                        detailImg.style.display = '';
+                                        if (detailFallback) {
+                                            detailFallback.style.display = 'none';
+                                        }
+                                    } else if (detailFallback) {
+                                        // If no img element exists, create one
+                                        const voterName = callData.voterName || 'Voter';
+                                        const img = document.createElement('img');
+                                        img.id = 'call-detail-image';
+                                        img.src = foundUrl;
+                                        img.alt = voterName;
+                                        img.style.cssText = 'width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);';
+                                        img.setAttribute('data-voter-id', voterIdNumber);
+                                        img.onerror = function() {
+                                            this.style.display = 'none';
+                                            if (detailFallback) {
+                                                detailFallback.style.display = 'flex';
+                                            }
+                                        };
+                                        detailFallback.parentNode.replaceChild(img, detailFallback);
+                                    }
+                                }
+                            }).catch(() => {
+                                // Silently fail - fallback will show
+                            });
+                        }
+                    }
                 }
             }, 100);
         } else {
@@ -12501,7 +13198,8 @@ async function deleteNotification(notificationId) {
         await deleteDoc(notificationRef);
 
         // Remove from UI immediately with animation
-        const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+        const notificationItem = document.querySelector(` [data - notification - id = "${notificationId}"]
+`);
         if (notificationItem) {
             notificationItem.style.transition = 'opacity 0.3s, transform 0.3s';
             notificationItem.style.opacity = '0';
@@ -12525,7 +13223,11 @@ async function deleteNotification(notificationId) {
         if (error.code === 'permission-denied') {
             errorMessage = 'Permission denied. You may not have permission to delete this notification. Please contact your administrator.';
         } else if (error.message) {
-            errorMessage = `Error: ${error.message}`;
+            errorMessage = `
+Error: $ {
+    error.message
+}
+`;
         }
 
         if (window.showErrorDialog) {
@@ -12622,7 +13324,11 @@ async function clearAllNotifications() {
         if (error.code === 'permission-denied') {
             errorMessage = 'Permission denied. You may not have permission to delete notifications. Please contact your administrator.';
         } else if (error.message) {
-            errorMessage = `Error: ${error.message}`;
+            errorMessage = `
+Error: $ {
+    error.message
+}
+`;
         }
 
         // Re-enable listener on error
@@ -12683,13 +13389,27 @@ async function changeAgentAccessCodeInModal(agentId, currentCode) {
         // Show confirmation
         if (window.showConfirm) {
             const confirmed = await window.showConfirm(
-                `Are you sure you want to change the access code for ${agentData.name}? The old code (${currentCode}) will no longer work.`,
+                `
+Are you sure you want to change the access code
+for $ {
+    agentData.name
+} ? The old code($ {
+    currentCode
+}) will no longer work.
+`,
                 'Change Access Code'
             );
 
             if (!confirmed) return;
         } else {
-            if (!confirm(`Are you sure you want to change the access code for ${agentData.name}? The old code (${currentCode}) will no longer work.`)) {
+            if (!confirm(`
+Are you sure you want to change the access code
+for $ {
+    agentData.name
+} ? The old code($ {
+    currentCode
+}) will no longer work.
+`)) {
                 return;
             }
         }
@@ -12842,137 +13562,233 @@ async function showAgentSelectionForVoterAssignment() {
         });
 
         // Create three-panel layout
-        let html = `
-            <div class="assign-voters-layout" style="display: flex; gap: 16px; height: 600px; min-height: 500px;">
-                <!-- Left Panel: Agents List -->
-                <div class="assign-panel-left" style="flex: 0 0 250px; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white;">
-                    <div style="background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Agents</h3>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);">Select an agent</p>
-                    </div>
-                    <div id="agents-list-container" style="flex: 1; overflow-y: auto; padding: 12px;">
-        `;
+        let html = ` <
+div class = "assign-voters-layout"
+style = "display: flex; gap: 16px; height: 600px; min-height: 500px;" >
+    <
+    !--Left Panel: Agents List-- >
+    <
+    div class = "assign-panel-left"
+style = "flex: 0 0 250px; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white;" >
+    <
+    div style = "background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);" >
+    <
+    h3 style = "margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);" > Agents < /h3> <
+p style = "margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);" > Select an agent < /p> < /
+div > <
+    div id = "agents-list-container"
+style = "flex: 1; overflow-y: auto; padding: 12px;" >
+    `;
 
         agents.forEach((agent, index) => {
-            html += `
-                <button 
-                    class="agent-select-btn" 
-                    data-agent-id="${agent.id}"
-                    onclick="selectAgentForAssignment('${agent.id}')"
-                    style="width: 100%; text-align: left; padding: 14px; margin-bottom: 8px; border: 2px solid var(--border-color); 
-                           border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s;
-                           display: flex; flex-direction: column; align-items: flex-start; gap: 4px;"
-                >
-                    <div style="font-weight: 600; font-size: 14px; color: var(--text-color);">${agent.name}</div>
-                    <div style="font-size: 12px; color: var(--text-light);">${agent.assignedArea}</div>
-                </button>
-            `;
+            html += ` <
+    button
+class = "agent-select-btn"
+data - agent - id = "${agent.id}"
+onclick = "selectAgentForAssignment('${agent.id}')"
+style = "width: 100%; text-align: left; padding: 14px; margin-bottom: 8px; border: 2px solid var(--border-color); 
+border - radius: 8 px;
+background: white;
+cursor: pointer;
+transition: all 0.2 s;
+display: flex;
+flex - direction: column;
+align - items: flex - start;
+gap: 4 px;
+" > <
+div style = "font-weight: 600; font-size: 14px; color: var(--text-color);" > $ {
+    agent.name
+} < /div> <
+div style = "font-size: 12px; color: var(--text-light);" > $ {
+    agent.assignedArea
+} < /div> < /
+button >
+    `;
         });
 
-        html += `
-                    </div>
-                </div>
+        html += ` <
+    /div> < /
+div >
 
-                <!-- Center Panel: Voters List -->
-                <div class="assign-panel-center" style="flex: 1; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white; min-width: 0;">
-                    <div style="background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Voters</h3>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);" id="selected-agent-info">Select an agent first</p>
-                    </div>
-                    <div style="padding: 12px; border-bottom: 2px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="voter-search-assign" placeholder="Search voters by name, ID, island, address..." 
-                                   style="flex: 1; padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;">
-                        </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button id="filter-toggle-btn" class="btn-secondary btn-compact" onclick="toggleVoterFilters()" style="font-size: 12px; padding: 8px 12px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; display: inline-block;">
-                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                                </svg>
-                                Filters
-                            </button>
-                        </div>
-                        <div id="voter-filters-panel" style="display: none; padding: 10px; background: var(--light-color); border-radius: 8px; border: 1px solid var(--border-color);">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Island</label>
-                                    <select id="filter-island" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;">
-                                        <option value="">All Islands</option>
-                                    </select>
-                                </div>
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Atoll</label>
-                                    <select id="filter-atoll" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;">
-                                        <option value="">All Atolls</option>
-                                    </select>
-                                </div>
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Constituency</label>
-                                    <select id="filter-constituency" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;">
-                                        <option value="">All Constituencies</option>
-                                    </select>
-                                </div>
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Address</label>
-                                    <select id="filter-address" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; position: relative; z-index: 1;">
-                                        <option value="">All Addresses</option>
-                                    </select>
-                                </div>
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Ballot Box</label>
-                                    <select id="filter-ballot" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;">
-                                        <option value="">All Ballot Boxes</option>
-                                    </select>
-                                </div>
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Gender</label>
-                                    <select id="filter-gender" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;">
-                                        <option value="">All Genders</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div style="position: relative;">
-                                    <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;">Filter by Status</label>
-                                    <select id="filter-status" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;">
-                                        <option value="">All Status</option>
-                                        <option value="unassigned">Unassigned</option>
-                                        <option value="assigned">Assigned to Selected</option>
-                                        <option value="assigned-other">Assigned to Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="voters-list-container" style="flex: 1; overflow-y: auto; padding: 12px;">
-                        <div style="text-align: center; padding: 40px; color: var(--text-light);">
-                            <p>Please select an agent to view and assign voters</p>
-                        </div>
-                    </div>
-                </div>
+    <
+    !--Center Panel: Voters List-- >
+    <
+    div class = "assign-panel-center"
+style = "flex: 1; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white; min-width: 0;" >
+    <
+    div style = "background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);" >
+    <
+    h3 style = "margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);" > Voters < /h3> <
+p style = "margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);"
+id = "selected-agent-info" > Select an agent first < /p> < /
+div > <
+    div style = "padding: 12px; border-bottom: 2px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;" >
+    <
+    div style = "display: flex; gap: 8px;" >
+    <
+    input type = "text"
+id = "voter-search-assign"
+placeholder = "Search voters by name, ID, island, address..."
+style = "flex: 1; padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 14px;" >
+    <
+    /div> <
+div style = "display: flex; gap: 8px; flex-wrap: wrap;" >
+    <
+    button id = "filter-toggle-btn"
+class = "btn-secondary btn-compact"
+onclick = "toggleVoterFilters()"
+style = "font-size: 12px; padding: 8px 12px;" >
+    <
+    svg xmlns = "http://www.w3.org/2000/svg"
+width = "14"
+height = "14"
+viewBox = "0 0 24 24"
+fill = "none"
+stroke = "currentColor"
+stroke - width = "2"
+stroke - linecap = "round"
+stroke - linejoin = "round"
+style = "margin-right: 6px; display: inline-block;" >
+    <
+    polygon points = "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" > < /polygon> < /
+svg >
+    Filters <
+    /button> < /
+div > <
+    div id = "voter-filters-panel"
+style = "display: none; padding: 10px; background: var(--light-color); border-radius: 8px; border: 1px solid var(--border-color);" >
+    <
+    div style = "display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;" >
+    <
+    div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Island < /label> <
+select id = "filter-island"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;" >
+    <
+    option value = "" > All Islands < /option> < /
+select > <
+    /div> <
+div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Atoll < /label> <
+select id = "filter-atoll"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;" >
+    <
+    option value = "" > All Atolls < /option> < /
+select > <
+    /div> <
+div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Constituency < /label> <
+select id = "filter-constituency"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;" >
+    <
+    option value = "" > All Constituencies < /option> < /
+select > <
+    /div> <
+div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Address < /label> <
+select id = "filter-address"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; position: relative; z-index: 1;" >
+    <
+    option value = "" > All Addresses < /option> < /
+select > <
+    /div> <
+div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Ballot Box < /label> <
+select id = "filter-ballot"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;" >
+    <
+    option value = "" > All Ballot Boxes < /option> < /
+select > <
+    /div> <
+div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Gender < /label> <
+select id = "filter-gender"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;" >
+    <
+    option value = "" > All Genders < /option> <
+option value = "Male" > Male < /option> <
+option value = "Female" > Female < /option> < /
+select > <
+    /div> <
+div style = "position: relative;" >
+    <
+    label style = "display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase;" > Filter by Status < /label> <
+select id = "filter-status"
+style = "width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;" >
+    <
+    option value = "" > All Status < /option> <
+option value = "unassigned" > Unassigned < /option> <
+option value = "assigned" > Assigned to Selected < /option> <
+option value = "assigned-other" > Assigned to Other < /option> < /
+select > <
+    /div> < /
+div > <
+    /div> < /
+div > <
+    div id = "voters-list-container"
+style = "flex: 1; overflow-y: auto; padding: 12px;" >
+    <
+    div style = "text-align: center; padding: 40px; color: var(--text-light);" >
+    <
+    p > Please select an agent to view and assign voters < /p> < /
+div > <
+    /div> < /
+div >
 
-                <!-- Right Panel: Voter Details -->
-                <div class="assign-panel-right" style="flex: 0 0 320px; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white;">
-                    <div style="background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);">Voter Details</h3>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);">Select a voter to view details</p>
-                    </div>
-                    <div id="voter-details-container" style="flex: 1; overflow-y: auto; padding: 16px;">
-                        <div style="text-align: center; padding: 40px; color: var(--text-light);">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; opacity: 0.5;">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                            <p style="margin: 0;">Select a voter from the list to view full details</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id="assignment-error" class="error-message" style="display: none; margin-top: 15px;"></div>
-            <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
-                <button type="button" class="btn-secondary btn-compact" onclick="closeModal()">Close</button>
-            </div>
-        `;
+    <
+    !--Right Panel: Voter Details-- >
+    <
+    div class = "assign-panel-right"
+style = "flex: 0 0 320px; display: flex; flex-direction: column; border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; background: white;" >
+    <
+    div style = "background: var(--primary-50); padding: 16px; border-bottom: 2px solid var(--border-color);" >
+    <
+    h3 style = "margin: 0; font-size: 16px; font-weight: 600; color: var(--text-color);" > Voter Details < /h3> <
+p style = "margin: 4px 0 0 0; font-size: 12px; color: var(--text-light);" > Select a voter to view details < /p> < /
+div > <
+    div id = "voter-details-container"
+style = "flex: 1; overflow-y: auto; padding: 16px;" >
+    <
+    div style = "text-align: center; padding: 40px; color: var(--text-light);" >
+    <
+    svg xmlns = "http://www.w3.org/2000/svg"
+width = "48"
+height = "48"
+viewBox = "0 0 24 24"
+fill = "none"
+stroke = "currentColor"
+stroke - width = "1.5"
+stroke - linecap = "round"
+stroke - linejoin = "round"
+style = "margin: 0 auto 16px; opacity: 0.5;" >
+    <
+    path d = "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" > < /path> <
+circle cx = "12"
+cy = "7"
+r = "4" > < /circle> < /
+svg > <
+    p style = "margin: 0;" > Select a voter from the list to view full details < /p> < /
+div > <
+    /div> < /
+div > <
+    /div> <
+div id = "assignment-error"
+class = "error-message"
+style = "display: none; margin-top: 15px;" > < /div> <
+div class = "modal-footer"
+style = "margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;" >
+    <
+    button type = "button"
+class = "btn-secondary btn-compact"
+onclick = "closeModal()" > Close < /button> < /
+div >
+    `;
 
         modalBody.innerHTML = html;
         modalOverlay.style.display = 'flex';
@@ -13079,7 +13895,11 @@ function selectAgentForAssignment(agentId) {
     const selectedAgent = window.assignmentData.agents.find(a => a.id === agentId);
     const agentInfo = document.getElementById('selected-agent-info');
     if (agentInfo && selectedAgent) {
-        agentInfo.textContent = `Assigning voters to: ${selectedAgent.name}`;
+        agentInfo.textContent = `
+Assigning voters to: $ {
+    selectedAgent.name
+}
+`;
     }
 
     // Reset pagination and cache when selecting new agent
@@ -13089,15 +13909,28 @@ function selectAgentForAssignment(agentId) {
     // Clear voter details panel
     const detailsContainer = document.getElementById('voter-details-container');
     if (detailsContainer) {
-        detailsContainer.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: var(--text-light);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px; opacity: 0.5;">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <p style="margin: 0;">Select a voter from the list to view full details</p>
-            </div>
-        `;
+        detailsContainer.innerHTML = ` <
+div style = "text-align: center; padding: 40px; color: var(--text-light);" >
+    <
+    svg xmlns = "http://www.w3.org/2000/svg"
+width = "48"
+height = "48"
+viewBox = "0 0 24 24"
+fill = "none"
+stroke = "currentColor"
+stroke - width = "1.5"
+stroke - linecap = "round"
+stroke - linejoin = "round"
+style = "margin: 0 auto 16px; opacity: 0.5;" >
+    <
+    path d = "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" > < /path> <
+circle cx = "12"
+cy = "7"
+r = "4" > < /circle> < /
+svg > <
+    p style = "margin: 0;" > Select a voter from the list to view full details < /p> < /
+div >
+    `;
     }
 
     // Render voters list
@@ -13123,83 +13956,83 @@ function renderVotersForAssignment(agentId) {
     const treeViewEnabled = window.assignmentData.treeViewEnabled || false;
 
     // Check cache first (if filters haven't changed)x`
-    const cacheKey = `${filterIsland}-${filterAtoll}-${filterConstituency}-${filterAddress}-${filterBallot}-${filterGender}-${filterStatus}-${searchTerm}`;
-    let filteredVoters;
+const cacheKey = `${filterIsland}-${filterAtoll}-${filterConstituency}-${filterAddress}-${filterBallot}-${filterGender}-${filterStatus}-${searchTerm}`;
+let filteredVoters;
 
-    if (window.assignmentData.cachedResults && window.assignmentData.cachedResults.key === cacheKey) {
-        filteredVoters = window.assignmentData.cachedResults.data;
-    } else {
-        // Filter voters
-        filteredVoters = [...window.assignmentData.voters];
+if (window.assignmentData.cachedResults && window.assignmentData.cachedResults.key === cacheKey) {
+    filteredVoters = window.assignmentData.cachedResults.data;
+} else {
+    // Filter voters
+    filteredVoters = [...window.assignmentData.voters];
 
-        // Apply search filter first (most selective)
-        if (searchTerm) {
-            filteredVoters = filteredVoters.filter(v => {
-                const name = (v.name || '').toLowerCase();
-                const id = (v.idNumber || '').toLowerCase();
-                const island = (v.island || '').toLowerCase();
-                const address = (v.permanentAddress || '').toLowerCase();
-                const atoll = (v.atoll || '').toLowerCase();
-                const constituency = (v.constituency || '').toLowerCase();
-                const ballot = (v.ballotBox || '').toLowerCase();
-                return name.includes(searchTerm) || id.includes(searchTerm) ||
-                    island.includes(searchTerm) || address.includes(searchTerm) ||
-                    atoll.includes(searchTerm) || constituency.includes(searchTerm) ||
-                    ballot.includes(searchTerm);
-            });
-        }
-
-        // Apply filters
-        if (filterIsland) {
-            filteredVoters = filteredVoters.filter(v => v.island === filterIsland);
-        }
-        if (filterAtoll) {
-            filteredVoters = filteredVoters.filter(v => v.atoll === filterAtoll);
-        }
-        if (filterConstituency) {
-            filteredVoters = filteredVoters.filter(v => v.constituency === filterConstituency);
-        }
-        if (filterAddress) {
-            filteredVoters = filteredVoters.filter(v => v.permanentAddress === filterAddress);
-        }
-        if (filterBallot) {
-            filteredVoters = filteredVoters.filter(v => v.ballotBox === filterBallot);
-        }
-        if (filterGender) {
-            filteredVoters = filteredVoters.filter(v => v.gender === filterGender);
-        }
-        if (filterStatus) {
-            if (filterStatus === 'unassigned') {
-                filteredVoters = filteredVoters.filter(v => !v.currentAgent);
-            } else if (filterStatus === 'assigned') {
-                filteredVoters = filteredVoters.filter(v => v.currentAgent === agentId);
-            } else if (filterStatus === 'assigned-other') {
-                filteredVoters = filteredVoters.filter(v => v.currentAgent && v.currentAgent !== agentId);
-            }
-        }
-
-        // Sort by name by default (no sort dropdown needed)
-        filteredVoters.sort((a, b) => {
-            return (a.name || '').localeCompare(b.name || '');
+    // Apply search filter first (most selective)
+    if (searchTerm) {
+        filteredVoters = filteredVoters.filter(v => {
+            const name = (v.name || '').toLowerCase();
+            const id = (v.idNumber || '').toLowerCase();
+            const island = (v.island || '').toLowerCase();
+            const address = (v.permanentAddress || '').toLowerCase();
+            const atoll = (v.atoll || '').toLowerCase();
+            const constituency = (v.constituency || '').toLowerCase();
+            const ballot = (v.ballotBox || '').toLowerCase();
+            return name.includes(searchTerm) || id.includes(searchTerm) ||
+                island.includes(searchTerm) || address.includes(searchTerm) ||
+                atoll.includes(searchTerm) || constituency.includes(searchTerm) ||
+                ballot.includes(searchTerm);
         });
-
-        // Cache results
-        window.assignmentData.cachedResults = {
-            key: cacheKey,
-            data: filteredVoters
-        };
     }
 
-    // Store filtered voters for pagination
-    window.assignmentData.filteredVoters = filteredVoters;
-
-    // Update filter dropdowns with available options (only if not cached)
-    if (!window.assignmentData.cachedResults || window.assignmentData.cachedResults.key !== cacheKey) {
-        updateFilterDropdowns(filteredVoters, filterIsland, filterAtoll);
+    // Apply filters
+    if (filterIsland) {
+        filteredVoters = filteredVoters.filter(v => v.island === filterIsland);
+    }
+    if (filterAtoll) {
+        filteredVoters = filteredVoters.filter(v => v.atoll === filterAtoll);
+    }
+    if (filterConstituency) {
+        filteredVoters = filteredVoters.filter(v => v.constituency === filterConstituency);
+    }
+    if (filterAddress) {
+        filteredVoters = filteredVoters.filter(v => v.permanentAddress === filterAddress);
+    }
+    if (filterBallot) {
+        filteredVoters = filteredVoters.filter(v => v.ballotBox === filterBallot);
+    }
+    if (filterGender) {
+        filteredVoters = filteredVoters.filter(v => v.gender === filterGender);
+    }
+    if (filterStatus) {
+        if (filterStatus === 'unassigned') {
+            filteredVoters = filteredVoters.filter(v => !v.currentAgent);
+        } else if (filterStatus === 'assigned') {
+            filteredVoters = filteredVoters.filter(v => v.currentAgent === agentId);
+        } else if (filterStatus === 'assigned-other') {
+            filteredVoters = filteredVoters.filter(v => v.currentAgent && v.currentAgent !== agentId);
+        }
     }
 
-    // Always render list view (tree view removed for new design)
-    renderListView(filteredVoters, agentId, votersContainer);
+    // Sort by name by default (no sort dropdown needed)
+    filteredVoters.sort((a, b) => {
+        return (a.name || '').localeCompare(b.name || '');
+    });
+
+    // Cache results
+    window.assignmentData.cachedResults = {
+        key: cacheKey,
+        data: filteredVoters
+    };
+}
+
+// Store filtered voters for pagination
+window.assignmentData.filteredVoters = filteredVoters;
+
+// Update filter dropdowns with available options (only if not cached)
+if (!window.assignmentData.cachedResults || window.assignmentData.cachedResults.key !== cacheKey) {
+    updateFilterDropdowns(filteredVoters, filterIsland, filterAtoll);
+}
+
+// Always render list view (tree view removed for new design)
+renderListView(filteredVoters, agentId, votersContainer);
 }
 
 // Render list view (flat list) with pagination
@@ -13253,7 +14086,9 @@ function renderListView(voters, agentId, container) {
             const imageSection = document.createElement('div');
             imageSection.style.cssText = 'flex-shrink: 0; margin-right: 12px;';
 
-            const imageUrl = voter.image || voter.imageUrl || voter.photo || voter.photoUrl || '';
+            // Get image URL using the function that checks images folder
+            const voterIdNumber = voter.idNumber || voter.voterId || '';
+            let imageUrl = getVoterImageUrl(voter, voterIdNumber);
             const initials = voter.name ? voter.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
 
             if (imageUrl) {
@@ -13261,13 +14096,27 @@ function renderListView(voters, agentId, container) {
                 img.src = imageUrl;
                 img.alt = voter.name || 'Voter';
                 img.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--border-color);';
+                img.setAttribute('data-voter-id', voterIdNumber || '');
                 img.onerror = function() {
-                    // Fallback to initials if image fails to load
+                    // Fallback to initials if image fails to load, then try folder lookup
                     this.style.display = 'none';
                     const fallbackDiv = document.createElement('div');
                     fallbackDiv.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-color);';
                     fallbackDiv.textContent = initials;
                     imageSection.appendChild(fallbackDiv);
+
+                    // Try to load from folder
+                    if (voterIdNumber && voterIdNumber.trim()) {
+                        tryLoadImageFromFolder(this, voterIdNumber).then(found => {
+                            if (found) {
+                                this.src = found;
+                                this.style.display = '';
+                                if (fallbackDiv.parentNode) {
+                                    fallbackDiv.parentNode.removeChild(fallbackDiv);
+                                }
+                            }
+                        });
+                    }
                 };
                 imageSection.appendChild(img);
             } else {
@@ -13275,6 +14124,28 @@ function renderListView(voters, agentId, container) {
                 initialsDiv.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; background: var(--gradient-primary); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-color);';
                 initialsDiv.textContent = initials;
                 imageSection.appendChild(initialsDiv);
+
+                // Try to lookup image from folder asynchronously
+                if (voterIdNumber && voterIdNumber.trim()) {
+                    lookupImageFromFolder(voterIdNumber).then(foundUrl => {
+                        if (foundUrl) {
+                            const img = document.createElement('img');
+                            img.src = foundUrl;
+                            img.alt = voter.name || 'Voter';
+                            img.style.cssText = 'width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--border-color);';
+                            img.setAttribute('data-voter-id', voterIdNumber);
+                            img.onerror = function() {
+                                this.style.display = 'none';
+                                if (initialsDiv.parentNode) {
+                                    initialsDiv.style.display = 'flex';
+                                }
+                            };
+                            if (initialsDiv.parentNode) {
+                                initialsDiv.parentNode.replaceChild(img, initialsDiv);
+                            }
+                        }
+                    }).catch(() => {});
+                }
             }
 
             // Voter info section
@@ -13499,7 +14370,13 @@ function renderTreeView(voters, agentId, container) {
                                 ${isAssigned ? '<span style="font-size: 10px; color: var(--success-color); font-weight: 600; margin-top: 2px;">(Assigned)</span>' : ''}
                             </div>
                         </div>
-                        ${voter.image ? `<img src="${voter.image}" alt="${voter.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 2px solid var(--border-color); margin-left: 10px; flex-shrink: 0;" onerror="this.style.display='none';">` : ''}
+                        ${(() => {
+                            const voterIdNumber = voter.idNumber || voter.voterId || '';
+                            const imgUrl = getVoterImageUrl(voter, voterIdNumber);
+                            return imgUrl ? 
+                                `<img src="${imgUrl}" alt="${voter.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 2px solid var(--border-color); margin-left: 10px; flex-shrink: 0;" data-voter-id="${voterIdNumber || ''}" onerror="this.onerror=null; this.style.display='none'; tryLoadImageFromFolder(this, '${voterIdNumber || ''}').then(found => { if(found) { this.src=found; this.style.display=''; } });">` : 
+                                '';
+                        })()}
                     </label>
                 `;
             });
@@ -13987,16 +14864,27 @@ function showVoterDetailsForAssignment(voter) {
         }
     });
 
+    // Get image URL using the function that checks images folder
+    const voterIdNumber = fullVoter.idNumber || fullVoter.voterId || '';
+    let imageUrl = getVoterImageUrl(fullVoter, voterIdNumber);
+    const initials = fullVoter.name ? fullVoter.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
+
     // Build details HTML
     let html = `
         <div style="display: flex; flex-direction: column; gap: 16px;">
-            ${fullVoter.image ? `
+            ${imageUrl ? `
                 <div style="text-align: center; margin-bottom: 8px;">
-                    <img src="${fullVoter.image}" alt="${fullVoter.name}" 
+                    <img id="assignment-detail-image" src="${imageUrl}" alt="${fullVoter.name}" 
                          style="width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 3px solid var(--border-color);"
-                         onerror="this.style.display='none'">
+                         data-voter-id="${voterIdNumber || ''}"
+                         onerror="this.onerror=null; this.style.display='none'; const fallback=this.nextElementSibling; if(fallback) fallback.style.display='flex'; tryLoadImageFromFolder(this, '${voterIdNumber || ''}').then(found => { if(found) { this.src=found; this.style.display=''; if(fallback) fallback.style.display='none'; } });">
+                    <div id="assignment-detail-fallback" style="width: 120px; height: 120px; border-radius: 12px; border: 3px solid var(--border-color); background: var(--gradient-primary); color: white; font-weight: 700; font-size: 36px; display: none; align-items: center; justify-content: center; margin: 0 auto;">${initials}</div>
                 </div>
-            ` : ''}
+            ` : `
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <div id="assignment-detail-fallback" style="width: 120px; height: 120px; border-radius: 12px; border: 3px solid var(--border-color); background: var(--gradient-primary); color: white; font-weight: 700; font-size: 36px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">${initials}</div>
+                </div>
+            `}
             <div style="border-bottom: 2px solid var(--border-color); padding-bottom: 12px;">
                 <h4 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: var(--text-color);">${fullVoter.name || 'N/A'}</h4>
                 <p style="margin: 0; font-size: 13px; color: var(--text-light);">ID: ${fullVoter.idNumber || 'N/A'}</p>
@@ -14080,6 +14968,41 @@ function showVoterDetailsForAssignment(voter) {
     `;
 
     detailsContainer.innerHTML = html;
+
+    // If no image URL found, try to lookup from images folder asynchronously
+    if (!imageUrl && voterIdNumber && voterIdNumber.trim()) {
+        lookupImageFromFolder(voterIdNumber).then(foundUrl => {
+            if (foundUrl) {
+                const detailImg = detailsContainer.querySelector('#assignment-detail-image');
+                const detailFallback = detailsContainer.querySelector('#assignment-detail-fallback');
+
+                if (detailImg) {
+                    detailImg.src = foundUrl;
+                    detailImg.style.display = '';
+                    if (detailFallback) {
+                        detailFallback.style.display = 'none';
+                    }
+                } else if (detailFallback) {
+                    // If no img element exists, create one
+                    const img = document.createElement('img');
+                    img.id = 'assignment-detail-image';
+                    img.src = foundUrl;
+                    img.alt = fullVoter.name || 'Voter';
+                    img.style.cssText = 'width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 3px solid var(--border-color);';
+                    img.setAttribute('data-voter-id', voterIdNumber);
+                    img.onerror = function() {
+                        this.style.display = 'none';
+                        if (detailFallback) {
+                            detailFallback.style.display = 'flex';
+                        }
+                    };
+                    detailFallback.parentNode.replaceChild(img, detailFallback);
+                }
+            }
+        }).catch(() => {
+            // Silently fail - fallback will show
+        });
+    }
 }
 
 // Toggle voter assignment (single voter)
